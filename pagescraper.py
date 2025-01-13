@@ -1,15 +1,15 @@
 '''
 Functions for webscraper functionality that involves scraping a specific,
-individual page. Should only EVER be deployed by scraping_manager, not
-designed to interface directly with user or any non-managed interface
+individual page. not designed to interface directly with user 
+or any non-managed interface
 '''
 
 import requests
 from bs4 import BeautifulSoup
 import json
-import dotenv
-from scrapercfg import IMG_FILETYPES, TEXT_FILETYPES, AUDIO_FILETYPES, VIDEO_FILETYPES
-from soupsorter import extract_images
+from config import IMG_FILETYPES, TEXT_FILETYPES, AUDIO_FILETYPES, VIDEO_FILETYPES, URL
+from urllib.parse import urlparse, urljoin
+from functools import reduce
 
 # Function to scrape a single webpage
 def scrape_page(url : str) -> object:
@@ -31,83 +31,43 @@ def scrape_page(url : str) -> object:
         soup = BeautifulSoup(response.content, 'html.parser')
     except Exception as e:
         return {"error": f"Failed to scrape {url}: {e}"}
+    
+    domain = urlparse(url).netloc
+    # extract all the links on the page
+    links_on_page = soup.find_all('a')
+    def link_reduce(acc, a):
+        href = a.get('href')
+        if not href:
+            return acc
+        if href.startswith("#"):
+            # Ignore internal page links
+            return acc
+        full_url = urljoin(url, href)  # Resolve relative URLs to absolute
+        parsed_url = urlparse(full_url)
 
-    extracted_data = dict()
-
-    # Extract images
-    def get_highest_resolution_image(img_tag):
-        # Function to get the highest resolution image from a tag
-        sources = img_tag.find_all('source')
-        if sources:
-            # If there are multiple sources, choose the one with the highest resolution
-            highest_res = max(sources, key=lambda s: int(s.get('data-res', '0')))
-            return highest_res.get('srcset') or highest_res.get('src')
-        return img_tag.get('src') or img_tag.get('data-src') or img_tag.get('data-lazy-src')
-
-    for img in soup.find_all(['img', 'picture']):
-        img_url = get_highest_resolution_image(img)
-        if img_url:
-            extracted_data.setdefault('images', []).append(
-                {
-                    "parent_element": img.parent.name,
-                    "element": img.name,
-                    "link_text": img.get('alt', ''),
-                    "url": img_url
-                }
-            )
-
-
-    # Extract text (paragraphs as an example)
-    for p in soup.find_all('p'):
-        media['text'].append({
-            "parent_element": p.parent.name,
-            "element": p.name,
-            "content": p.get_text(strip=True)
-        })
-
-    # Extract audio (example: <audio> tags)
-    for audio in soup.find_all('audio'):
-        media['audio'].append({
-            "parent_element": audio.parent.name,
-            "element": audio.name,
-            "url": audio.get('src', '')
-        })
-
-    # Extract other file links (pdf, etc.)
-    for link in soup.find_all('a', href=True):
-        href = link['href']
-        if href.endswith('.pdf') or href.endswith('.zip'):
-            media['misc_files'].append({
-                "parent_element": link.parent.name,
-                "element": link.name,
-                "link_text": link.get_text(strip=True),
-                "url": href
-            })
-
-        # Internal/external link classification
-        if url in href or href.startswith('/'):
-            links['internal'].append({
-                "link_text": link.get_text(strip=True),
-                "url": href
-            })
+        if href.startswith("//"):
+            # Protocol-relative external link
+            acc["external"].append(full_url)
+        elif href.startswith("/"):
+            # Absolute path within the domain
+            acc["internal"].append(full_url)
+        elif parsed_url.netloc and parsed_url.netloc != domain:
+            # Full URL pointing to an external domain
+            acc["external"].append(full_url)
         else:
-            links['external'].append({
-                "link_text": link.get_text(strip=True),
-                "url": href
-            })
-
-    # Package the scraped data into a JSON object
-    data = {
-        "url": url,
-        "media": media,
-        "links": links
+            # Relative path or fragment (internal link)
+            acc["internal"].append(full_url)
+        return acc
+        
+    sorted_links = reduce(link_reduce, links_on_page, {'internal': [], 'external': []})
+    links = {
+        'internal': [],
+        'external': []
     }
 
-    return json.dumps(data, indent=4)
+
 
 # Example usage
 if __name__ == "__main__":
-    # This URL would be passed to the Lambda function
-    example_url = input("Enter the URL to scrape: ")
-    scraped_data = scrape_page(example_url)
+    scraped_data = scrape_page(URL)
     print(scraped_data)
