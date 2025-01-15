@@ -7,7 +7,7 @@ or any non-managed interface
 import requests
 from bs4 import BeautifulSoup
 import json
-from config import IMG_FILETYPES, TEXT_FILETYPES, AUDIO_FILETYPES, VIDEO_FILETYPES, URL
+from config import URL, UNWANTED_TAGS
 from urllib.parse import urlparse, urljoin
 from functools import reduce
 
@@ -44,7 +44,6 @@ def scrape_page(url : str) -> object:
             return acc
         full_url = urljoin(url, href)  # Resolve relative URLs to absolute
         parsed_url = urlparse(full_url)
-
         if href.startswith("//"):
             # Protocol-relative external link
             acc["external"].append(full_url)
@@ -60,10 +59,17 @@ def scrape_page(url : str) -> object:
         return acc
         
     sorted_links = reduce(link_reduce, links_on_page, {'internal': [], 'external': []})
-    links = {
-        'internal': [],
-        'external': []
-    }
+    # now that we have all the links, we can remove them from the soup
+    # by replacing them with their text to remove hyperlinks
+    for link in links_on_page:
+        link.replaceWith(link.get_text())
+    # remove all style tags (not really useful for ai analysis)
+    for tag in soup.find_all(['b', 'i', 'u', 'strong', 'em', 'span']):
+        tag.unwrap()
+    soup.prettify()
+    with open("test.html", "w", encoding="utf-8") as file:
+        file.write(str(soup))
+    print('break') 
 
 
 
