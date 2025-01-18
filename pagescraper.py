@@ -46,7 +46,16 @@ def scrape_page(url : str) -> object:
         parsed_url = urlparse(full_url)
         if href.startswith("//"):
             # Protocol-relative external link
-            acc["external"].append(full_url)
+            '''
+             classification = 'external'
+            acc["external"].append(
+                {
+                    'title': a.get('title'),
+                    'text': a.get_text(),
+                    'url': full_url
+                
+                }'''
+            acc['external'].append(full_url)
         elif href.startswith("/"):
             # Absolute path within the domain
             acc["internal"].append(full_url)
@@ -66,7 +75,11 @@ def scrape_page(url : str) -> object:
     # remove all style tags (not really useful for ai analysis)
     for tag in soup.find_all(['b', 'i', 'u', 'strong', 'em', 'span']):
         tag.unwrap()
-    soup.prettify()
+    for named_div in [x for x in soup.find_all('div') if x.get('title')]:
+        print(named_div.get('title'))
+        div_title = named_div.get('title')
+        named_div.replaceWith(soup.new_tag('div', title=div_title))
+        soup.prettify()
     with open("test.html", "w", encoding="utf-8") as file:
         file.write(str(soup))
     print('break') 
