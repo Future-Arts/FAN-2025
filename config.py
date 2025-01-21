@@ -1,7 +1,7 @@
 # region scraper settings 
-URL = 'https://en.wikipedia.org/wiki/Volcanism_of_the_Mount_Edziza_volcanic_complex'
-UNWANTED_TAGS = ['button']
-UNWANTED_ENCLOSING_TAGS = ['header', 'footer', 'nav', 'aside', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6']
+URL = 'https://www.kitekitekitekite.com/'
+UNWANTED_TAGS = ['head', 'button', 'form', 'input', 'script', 'style', 'link']
+UNWANTED_ENCLOSING_TAGS = []
 # endregion
 
 # region image collection settings
