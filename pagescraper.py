@@ -42,13 +42,19 @@ def clean_soup(soup):
     tags_to_remove['decompose'] += [x for x in soup.find_all('div') if not x.find_all()]
     tags_to_remove['decompose'] += soup.find_all(UNWANTED_TAGS)
     tags_to_remove['unwrap'] += soup.find_all(UNWANTED_ENCLOSING_TAGS)
-    print(f"Removing {len(tags_to_remove['decompose'])} tags and unwrapping {len(tags_to_remove['unwrap'])} tags")
+    for tag in tags_to_remove['decompose']:
+        tag.decompose()
+    for tag in tags_to_remove['unwrap']:
+        if tag.contents:
+            tag.unwrap()
+        else:
+            tag.decompose()
 
 def format_soup(soup) -> str:
     '''
     Formats the soup for looking at in output json
     '''
-    if not hasattr(soup, "name") or soup.name is None:  # It's a text or navigable string
+    if not hasattr(soup, "name") or soup.name is None:
         text = soup.strip() if isinstance(soup, str) else None
         return text if text else None  # Return text or None if it's empty
 
@@ -114,15 +120,12 @@ def scrape_page(url : str) -> object:
         'url'       : url,
         'links'     : links,
         'images'    : images,
-        'text'      : [soup.stripped_strings],
+        'text'      : list(soup.stripped_strings),
         'html'      : format_soup(soup)
     }
     with open("output.json", "w", encoding="utf-8") as file:
         json.dump(results, file, ensure_ascii=False, indent=4)
 
-
-
 # Example usage
 if __name__ == "__main__":
-    scraped_data = scrape_page(URL)
-    print(scraped_data)
+    scrape_page(URL)
