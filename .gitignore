@@ -1,6 +1,11 @@
 # Scraping output
 *output*
 
+# Terraform config
+.terraform
+*.tfstate
+*.lock.hcl
+
 # Logs
 logs
 *.log
