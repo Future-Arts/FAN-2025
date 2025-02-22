@@ -1,0 +1,46 @@
+To install and configure AWS CLI (command line interface):
+	- use this link:
+		https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
+	- restart after installation
+	- open a terminal/command prompt
+	- type "aws configure sso"
+	- fill in the required fields based on the information you get by:
+		- going to this link:
+			- https://d-9067d96818.awsapps.com/start
+		- clicking the Future Arts aws account dropdown
+		- clicking "Access Keys"
+		- Scroll down to the section "Option 3: Use individual values in your AWS service client"
+		- copy and paste the values into the terminal when prompted (right click in command prompt to paste)
+		- other fields to fill in (in no particular order, I forget when they ask for this:
+			- "SSO Session Name" : {your first name (lowercase)}-dev
+			- "SSO Region" : us-east-1
+			- output format : json
+			- "Default client region" : us-west-2
+	- Use the default profile name "Developer-{your account ID}"
+	- Take note of the profile name (copy it to somewhere)
+
+To make a change to the AWS infrastructure:
+	- Reasons you may need to do this:
+		- Create/Destroy a resource
+		- Push Lambda updates
+			- Make sure that you run the file "build_lambda.bat" (or .sh if on linux) before you
+			  run the terraform command
+		- Modify Terraform.state in dynamodb (don't do this)
+		- Clear out the dynamoDB/S3 storage (probably don't do this either)
+		 
+		- IF YOU ARE UNSURE ABOUT ANYTHING YOU ARE DOING PLEASE ASK KYLE
+		- IT IS VERY EASY TO BREAK OUR AWS INFRASTRUCTURE ACCIDENTALLY (very annoying)
+
+	- FOR ALL TERRAFORM COMMANDS BELOW:
+                                  make sure you include these quotes (just the inner set)
+                                             ▼                           ▼
+			- PUT ' --backend-config="profile={your AWS SSO profile name}" ' at the 
+			  end of the command
+		- "terraform init"
+			- initializes the directory with a .terraform folder
+			- can be used with --migrate-state (don't do this either if you are unsure) to move the tfstate
+  		- "terraform plan"
+  			- provide the modifications that terraform intends to make if applied
+		- "terraform apply"
+			- pushed changes to AWS
+		- "terraform"

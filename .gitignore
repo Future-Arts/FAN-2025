@@ -1,6 +1,8 @@
 # Scraping output
 *output*
 
+infrastrucure/*.zip
+
 # Terraform config
 .terraform
 *.tfstate
