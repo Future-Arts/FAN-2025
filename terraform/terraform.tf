@@ -11,12 +11,20 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.88"
     }
+    null = {
+      source  = "hashicorp/null"
+      version = "~> 3.0"
+    }
+    local = {
+      source  = "hashicorp/local"
+      version = "~> 2.0"
+    }
   }
 }
 
 provider "aws" {
-  region  = "us-west-2"
-  profile = "Developer-024611159954"
+  region = "us-west-2"
+  # Using environment credentials instead of profile
 }
 
 # S3 Bucket for Terraform State
@@ -65,15 +73,26 @@ variable "environment" {
   default = "prod"
 }
 
-# SQS Queues
-resource "aws_sqs_queue" "scraping_dlq" {
-  name                      = "url-scraping-dlq"
-  message_retention_seconds = 1209600
-  visibility_timeout_seconds = 300
+# DynamoDB Table for Sitemap Storage
+resource "aws_dynamodb_table" "sitemap_storage" {
+  name           = "website-sitemaps"
+  billing_mode   = "PAY_PER_REQUEST"
+  hash_key       = "website_domain"
+
+  attribute {
+    name = "website_domain"
+    type = "S"
+  }
+
+  tags = {
+    Name        = "Website Sitemaps"
+    Environment = var.environment
+  }
 }
 
-resource "aws_sqs_queue" "image_dlq" {
-  name                      = "image-download-dlq"
+# SQS Dead Letter Queue
+resource "aws_sqs_queue" "scraping_dlq" {
+  name                      = "url-scraping-dlq"
   message_retention_seconds = 1209600
   visibility_timeout_seconds = 300
 }
@@ -84,7 +103,7 @@ resource "aws_sqs_queue" "lambda_dlq" {
   visibility_timeout_seconds = 300
 }
 
-# Main SQS Queues
+# Main SQS Queue
 resource "aws_sqs_queue" "scraping_queue" {
   name                      = "url-scraping-queue"
   visibility_timeout_seconds = 900  # 15 minutes
@@ -98,17 +117,65 @@ resource "aws_sqs_queue" "scraping_queue" {
   })
 }
 
-resource "aws_sqs_queue" "image_queue" {
-  name                      = "image-download-queue"
-  visibility_timeout_seconds = 900
-  message_retention_seconds = 1209600
-  delay_seconds             = 0
-  receive_wait_time_seconds = 20
-  
-  redrive_policy = jsonencode({
-    deadLetterTargetArn = aws_sqs_queue.image_dlq.arn
-    maxReceiveCount     = 3
-  })
+# S3 Bucket for scraped data
+resource "aws_s3_bucket" "scraped_data" {
+  bucket = "artist-scraped-data"
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+resource "aws_s3_bucket_versioning" "scraped_data_versioning" {
+  bucket = aws_s3_bucket.scraped_data.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "scraped_data_encryption" {
+  bucket = aws_s3_bucket.scraped_data.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+# Create requirements.txt file for Lambda dependencies
+resource "local_file" "requirements" {
+  content = <<EOF
+requests==2.31.0
+beautifulsoup4==4.12.2
+EOF
+  filename = "${path.module}/../infrastructure/requirements.txt"
+}
+
+# Ensure infrastructure directory exists
+resource "null_resource" "create_infrastructure_dir" {
+  provisioner "local-exec" {
+    command = "mkdir -p ${path.module}/../infrastructure"
+  }
+}
+
+# Build the Lambda deployment package using external script
+resource "null_resource" "lambda_package" {
+  triggers = {
+    # Rebuild when Python code or requirements change
+    python_code = fileexists("${path.module}/../infrastructure/pagescraper.py") ? filebase64sha256("${path.module}/../infrastructure/pagescraper.py") : "none"
+    requirements = local_file.requirements.content
+    build_script = fileexists("${path.module}/build_lambda.sh") ? filebase64sha256("${path.module}/build_lambda.sh") : "none"
+  }
+
+  provisioner "local-exec" {
+    command = "chmod +x ${path.module}/build_lambda.sh && ${path.module}/build_lambda.sh"
+  }
+
+  depends_on = [
+    local_file.requirements,
+    null_resource.create_infrastructure_dir
+  ]
 }
 
 # Lambda Function
@@ -121,7 +188,7 @@ resource "aws_lambda_function" "page_scraper" {
   timeout         = 300  # 5 minutes
   memory_size     = 512
 
-  source_code_hash = filebase64sha256("${path.module}/../infrastructure/lambda_function.zip")
+  source_code_hash = fileexists("${path.module}/../infrastructure/lambda_function.zip") ? filebase64sha256("${path.module}/../infrastructure/lambda_function.zip") : null
 
   dead_letter_config {
     target_arn = aws_sqs_queue.lambda_dlq.arn
@@ -133,16 +200,21 @@ resource "aws_lambda_function" "page_scraper" {
       RATE_LIMIT_PER_DOMAIN = 10
       ALLOWED_DOMAINS       = "[]"
       URL_QUEUE_URL         = aws_sqs_queue.scraping_queue.url
-      IMAGE_QUEUE_URL       = aws_sqs_queue.image_queue.url
+      SITEMAP_TABLE_NAME    = aws_dynamodb_table.sitemap_storage.name
     }
   }
+
+  depends_on = [
+    null_resource.lambda_package,
+    aws_cloudwatch_log_group.lambda_logs
+  ]
 
   #reserved_concurrent_executions = 10
 }
 
 # Lambda CloudWatch Log Group
 resource "aws_cloudwatch_log_group" "lambda_logs" {
-  name              = "/aws/lambda/${aws_lambda_function.page_scraper.function_name}"
+  name              = "/aws/lambda/page-scraper"
   retention_in_days = 14
 }
 
@@ -164,7 +236,7 @@ resource "aws_iam_role" "lambda_exec" {
   })
 }
 
-# Lambda IAM Policy
+# Lambda IAM Policy for basic execution
 resource "aws_iam_role_policy" "lambda_exec_policy" {
   name = "lambda-scraper-policy"
   role = aws_iam_role.lambda_exec.id
@@ -175,28 +247,87 @@ resource "aws_iam_role_policy" "lambda_exec_policy" {
       {
         Effect = "Allow"
         Action = [
-          "sqs:ReceiveMessage",
-          "sqs:DeleteMessage",
-          "sqs:GetQueueAttributes",
-          "sqs:SendMessage"
-        ]
-        Resource = [
-          aws_sqs_queue.scraping_queue.arn,
-          aws_sqs_queue.image_queue.arn,
-          aws_sqs_queue.scraping_dlq.arn,
-          aws_sqs_queue.image_dlq.arn,
-          aws_sqs_queue.lambda_dlq.arn
-        ]
-      },
-      {
-        Effect = "Allow"
-        Action = [
           "logs:CreateLogGroup",
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ]
         Resource = [
           "${aws_cloudwatch_log_group.lambda_logs.arn}:*"
+        ]
+      }
+    ]
+  })
+}
+
+# Lambda IAM Policy for SQS access
+resource "aws_iam_role_policy" "lambda_sqs" {
+  name = "lambda-sqs-policy"
+  role = aws_iam_role.lambda_exec.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "sqs:SendMessage",
+          "sqs:ReceiveMessage",
+          "sqs:DeleteMessage",
+          "sqs:GetQueueAttributes"
+        ]
+        Resource = [
+          aws_sqs_queue.scraping_queue.arn,
+          aws_sqs_queue.lambda_dlq.arn,
+          aws_sqs_queue.scraping_dlq.arn
+        ]
+      }
+    ]
+  })
+}
+
+# Lambda IAM Policy for DynamoDB access
+resource "aws_iam_role_policy" "lambda_dynamodb_policy" {
+  name = "lambda-dynamodb-sitemap-policy"
+  role = aws_iam_role.lambda_exec.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:PutItem",
+          "dynamodb:GetItem",
+          "dynamodb:UpdateItem",
+          "dynamodb:DeleteItem",
+          "dynamodb:Query",
+          "dynamodb:Scan"
+        ]
+        Resource = [
+          aws_dynamodb_table.sitemap_storage.arn
+        ]
+      }
+    ]
+  })
+}
+
+# Lambda IAM Policy for S3 access
+resource "aws_iam_role_policy" "lambda_s3_policy" {
+  name = "lambda-s3-policy"
+  role = aws_iam_role.lambda_exec.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:DeleteObject"
+        ]
+        Resource = [
+          "${aws_s3_bucket.scraped_data.arn}/*"
         ]
       }
     ]
@@ -261,35 +392,6 @@ resource "aws_iam_role_policy" "api_gateway_sqs" {
   })
 }
 
-# Lambda execution role policy for SQS
-resource "aws_iam_role_policy" "lambda_sqs" {
-  name = "lambda-sqs-policy"
-  role = aws_iam_role.lambda_exec.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "sqs:SendMessage",
-          "sqs:ReceiveMessage",
-          "sqs:DeleteMessage",
-          "sqs:GetQueueAttributes"
-        ]
-        Resource = [
-          aws_sqs_queue.scraping_queue.arn,
-          aws_sqs_queue.image_queue.arn,
-          aws_sqs_queue.lambda_dlq.arn,
-          aws_sqs_queue.scraping_dlq.arn,
-          aws_sqs_queue.image_dlq.arn
-        ]
-      }
-    ]
-  })
-}
-
-
 # API Gateway
 resource "aws_api_gateway_rest_api" "scraping_api" {
   name        = "scraping-api"
@@ -338,6 +440,14 @@ resource "aws_api_gateway_resource" "scrape" {
   path_part   = "scrape"
 }
 
+# OPTIONS method for CORS preflight
+resource "aws_api_gateway_method" "scrape_options" {
+  rest_api_id   = aws_api_gateway_rest_api.scraping_api.id
+  resource_id   = aws_api_gateway_resource.scrape.id
+  http_method   = "OPTIONS"
+  authorization = "NONE"
+}
+
 # API method
 resource "aws_api_gateway_method" "scrape_post" {
   rest_api_id      = aws_api_gateway_rest_api.scraping_api.id
@@ -376,12 +486,58 @@ resource "aws_api_gateway_model" "scrape_request_model" {
         type = "string"
         pattern = "^.*$"  # Accept any string
       }
-      store_images = {
-        type = "boolean"
-        default = false
-      }
     }
   })
+}
+
+# OPTIONS method integration (Mock integration for CORS)
+resource "aws_api_gateway_integration" "options_integration" {
+  rest_api_id = aws_api_gateway_rest_api.scraping_api.id
+  resource_id = aws_api_gateway_resource.scrape.id
+  http_method = aws_api_gateway_method.scrape_options.http_method
+  type        = "MOCK"
+
+  request_templates = {
+    "application/json" = "{\"statusCode\": 200}"
+  }
+}
+
+# OPTIONS method response with CORS headers
+resource "aws_api_gateway_method_response" "options_response_200" {
+  rest_api_id = aws_api_gateway_rest_api.scraping_api.id
+  resource_id = aws_api_gateway_resource.scrape.id
+  http_method = aws_api_gateway_method.scrape_options.http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = true
+    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Origin"  = true
+  }
+
+  response_models = {
+    "application/json" = "Empty"
+  }
+}
+
+# OPTIONS integration response with CORS headers
+resource "aws_api_gateway_integration_response" "options_integration_response" {
+  rest_api_id = aws_api_gateway_rest_api.scraping_api.id
+  resource_id = aws_api_gateway_resource.scrape.id
+  http_method = aws_api_gateway_method.scrape_options.http_method
+  status_code = aws_api_gateway_method_response.options_response_200.status_code
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,x-api-key'"
+    "method.response.header.Access-Control-Allow-Methods" = "'POST,OPTIONS'"
+    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+
+  response_templates = {
+    "application/json" = ""
+  }
+
+  depends_on = [aws_api_gateway_integration.options_integration]
 }
 
 # API Gateway integration to use the role
@@ -401,8 +557,7 @@ resource "aws_api_gateway_integration" "sqs_integration" {
   request_templates = {
     "application/json" = <<EOF
 Action=SendMessage&MessageBody={
-  "page_url": "$input.path('$.page_url')",
-  "store_images": $input.path('$.store_images')
+  "page_url": "$input.path('$.page_url')"
 }
 EOF
   }
@@ -415,6 +570,10 @@ resource "aws_api_gateway_method_response" "response_200" {
   http_method = aws_api_gateway_method.scrape_post.http_method
   status_code = "200"
 
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin" = true
+  }
+
   response_models = {
     "application/json" = "Empty"
   }
@@ -426,6 +585,10 @@ resource "aws_api_gateway_integration_response" "integration_response" {
   resource_id = aws_api_gateway_resource.scrape.id
   http_method = aws_api_gateway_method.scrape_post.http_method
   status_code = aws_api_gateway_method_response.response_200.status_code
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin" = "'*'"
+  }
 
   response_templates = {
     "application/json" = <<EOF
@@ -446,7 +609,9 @@ resource "aws_api_gateway_deployment" "api_deployment" {
 
   depends_on = [
     aws_api_gateway_integration.sqs_integration,
-    aws_api_gateway_integration_response.integration_response
+    aws_api_gateway_integration_response.integration_response,
+    aws_api_gateway_integration.options_integration,
+    aws_api_gateway_integration_response.options_integration_response
   ]
 
   lifecycle {
@@ -457,7 +622,9 @@ resource "aws_api_gateway_deployment" "api_deployment" {
     redeployment = sha1(jsonencode([
       aws_api_gateway_resource.scrape,
       aws_api_gateway_method.scrape_post,
-      aws_api_gateway_integration.sqs_integration
+      aws_api_gateway_method.scrape_options,
+      aws_api_gateway_integration.sqs_integration,
+      aws_api_gateway_integration.options_integration
     ]))
   }
 }
@@ -489,15 +656,11 @@ data "aws_caller_identity" "current" {}
 
 # Outputs
 output "api_endpoint" {
-  value = "${aws_api_gateway_deployment.api_deployment.invoke_url}${aws_api_gateway_stage.prod.stage_name}/scrape"
+  value = "https://${aws_api_gateway_rest_api.scraping_api.id}.execute-api.${data.aws_region.current.name}.amazonaws.com/${aws_api_gateway_stage.prod.stage_name}/scrape"
 }
 
 output "scraping_queue_url" {
   value = aws_sqs_queue.scraping_queue.url
-}
-
-output "image_queue_url" {
-  value = aws_sqs_queue.image_queue.url
 }
 
 output "api_key" {
@@ -508,7 +671,14 @@ output "api_key" {
 output "dlq_urls" {
   value = {
     scraping = aws_sqs_queue.scraping_dlq.url
-    image    = aws_sqs_queue.image_dlq.url
     lambda   = aws_sqs_queue.lambda_dlq.url
   }
+}
+
+output "sitemap_table_name" {
+  value = aws_dynamodb_table.sitemap_storage.name
+}
+
+output "s3_bucket_name" {
+  value = aws_s3_bucket.scraped_data.id
 }
