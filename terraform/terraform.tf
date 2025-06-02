@@ -24,10 +24,18 @@ terraform {
 
 provider "aws" {
   region = "us-west-2"
-  # Using environment credentials instead of profile
 }
 
-# S3 Bucket for Terraform State
+# variables (we test in production because i never write bad code)
+variable "environment" {
+  type    = string
+  default = "prod"
+}
+
+# ================================================================
+# terraform management / meta stuff
+# ================================================================
+# s3 bucket for storing tfstate remotely
 resource "aws_s3_bucket" "terraform_state" {
   bucket = "terraform-state-fan2025"
 
@@ -35,16 +43,14 @@ resource "aws_s3_bucket" "terraform_state" {
     prevent_destroy = true
   }
 }
-
-# Enable Versioning
+# enable s3 bucket versioning for some insurance in case something terrible happens
 resource "aws_s3_bucket_versioning" "terraform_state_versioning" {
   bucket = aws_s3_bucket.terraform_state.id
   versioning_configuration {
     status = "Enabled"
   }
 }
-
-# Enable Server-Side Encryption
+# server side encryption for tfstate
 resource "aws_s3_bucket_server_side_encryption_configuration" "terraform_state_encryption" {
   bucket = aws_s3_bucket.terraform_state.id
 
@@ -54,8 +60,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "terraform_state_e
     }
   }
 }
-
-# DynamoDB for State Locking
+# state locking in the incredibly rare chance that anyone else on the team ever learns to use terraform...
 resource "aws_dynamodb_table" "terraform_state_lock" {
   name         = "terraform-state-lock"
   billing_mode = "PAY_PER_REQUEST"
@@ -67,13 +72,10 @@ resource "aws_dynamodb_table" "terraform_state_lock" {
   }
 }
 
-# Variables
-variable "environment" {
-  type    = string
-  default = "prod"
-}
-
-# DynamoDB Table for Sitemap Storage
+# ================================================================
+# dashboard resources
+# ================================================================
+# dynamodb for storing some metadata about scraped sites, used in dashboard visualizer (separate db to avoid locking issues)
 resource "aws_dynamodb_table" "sitemap_storage" {
   name           = "website-sitemaps"
   billing_mode   = "PAY_PER_REQUEST"
@@ -90,34 +92,34 @@ resource "aws_dynamodb_table" "sitemap_storage" {
   }
 }
 
-# SQS Dead Letter Queue
+# ================================================================
+# scraping data pipeline before data processing and categorization
+# ================================================================
+# dlq for errored queue entries so that I can fix them (never happens because i never write bad code)
 resource "aws_sqs_queue" "scraping_dlq" {
   name                      = "url-scraping-dlq"
   message_retention_seconds = 1209600
   visibility_timeout_seconds = 300
 }
-
+# actually not sure what this one is, lemme uh get back to you
 resource "aws_sqs_queue" "lambda_dlq" {
   name                      = "lambda-scraper-dlq"
   message_retention_seconds = 1209600
   visibility_timeout_seconds = 300
 }
-
-# Main SQS Queue
+# the actual queue that the URLs should be inserted into when we need them to be scraped
 resource "aws_sqs_queue" "scraping_queue" {
   name                      = "url-scraping-queue"
-  visibility_timeout_seconds = 900  # 15 minutes
-  message_retention_seconds = 1209600  # 14 days
+  visibility_timeout_seconds = 900
+  message_retention_seconds = 1209600
   delay_seconds             = 0
-  receive_wait_time_seconds = 20  # Enable long polling
-  
+  receive_wait_time_seconds = 20
   redrive_policy = jsonencode({
     deadLetterTargetArn = aws_sqs_queue.scraping_dlq.arn
     maxReceiveCount     = 3
   })
 }
-
-# S3 Bucket for scraped data
+# bucket to hold all scraped data. this can be viewed as a backup for airtable if you need to refresh or reinitialize airtable
 resource "aws_s3_bucket" "scraped_data" {
   bucket = "artist-scraped-data"
 
@@ -125,14 +127,14 @@ resource "aws_s3_bucket" "scraped_data" {
     prevent_destroy = true
   }
 }
-
+# surely we will not need versioning on this bucket because we would never corrupt/mutilate the data inside, but let's enable it anyways just for fun
 resource "aws_s3_bucket_versioning" "scraped_data_versioning" {
   bucket = aws_s3_bucket.scraped_data.id
   versioning_configuration {
     status = "Enabled"
   }
 }
-
+# i guess we can encrypt the data, but i mean... it's all pulled from public sites lol
 resource "aws_s3_bucket_server_side_encryption_configuration" "scraped_data_encryption" {
   bucket = aws_s3_bucket.scraped_data.id
 
@@ -142,8 +144,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "scraped_data_encr
     }
   }
 }
-
-# Create requirements.txt file for Lambda dependencies
+# requirements.txt file for the page scraping lambda
 resource "local_file" "requirements" {
   content = <<EOF
 requests==2.31.0
@@ -151,15 +152,13 @@ beautifulsoup4==4.12.2
 EOF
   filename = "${path.module}/../infrastructure/requirements.txt"
 }
-
-# Ensure infrastructure directory exists
+# make sure the infrastructure directory exists in the correct location for zipping up the lambda
 resource "null_resource" "create_infrastructure_dir" {
   provisioner "local-exec" {
     command = "mkdir -p ${path.module}/../infrastructure"
   }
 }
-
-# Build the Lambda deployment package using external script
+# define triggers to rebuild lambda upload package
 resource "null_resource" "lambda_package" {
   triggers = {
     # Rebuild when Python code or requirements change
@@ -167,7 +166,9 @@ resource "null_resource" "lambda_package" {
     requirements = local_file.requirements.content
     build_script = fileexists("${path.module}/build_lambda.sh") ? filebase64sha256("${path.module}/build_lambda.sh") : "none"
   }
-
+  # might have to change this depending on what OS the dev is running on, but let's be real nobody else even uses terraform on this team.
+  # in fact, i doubt anyone will ever read this comment. if you do read this, even if you are a team working on this in the future, text
+  # me at 253-545-8346 and I will venmo/apple pay you 3 dollars.
   provisioner "local-exec" {
     command = "chmod +x ${path.module}/build_lambda.sh && ${path.module}/build_lambda.sh"
   }
@@ -177,8 +178,7 @@ resource "null_resource" "lambda_package" {
     null_resource.create_infrastructure_dir
   ]
 }
-
-# Lambda Function
+# page scraping script, defining local relative path and some aws configuration settings
 resource "aws_lambda_function" "page_scraper" {
   filename         = "${path.module}/../infrastructure/lambda_function.zip"
   function_name    = "page-scraper"
@@ -196,7 +196,7 @@ resource "aws_lambda_function" "page_scraper" {
 
   environment {
     variables = {
-      MAX_DEPTH             = 3
+      MAX_DEPTH             = 20
       RATE_LIMIT_PER_DOMAIN = 10
       ALLOWED_DOMAINS       = "[]"
       URL_QUEUE_URL         = aws_sqs_queue.scraping_queue.url
@@ -211,14 +211,26 @@ resource "aws_lambda_function" "page_scraper" {
 
   #reserved_concurrent_executions = 10
 }
-
-# Lambda CloudWatch Log Group
+# cloudwatch for storing errors
 resource "aws_cloudwatch_log_group" "lambda_logs" {
   name              = "/aws/lambda/page-scraper"
   retention_in_days = 14
 }
+# trigger the lambda whenever there is a url in the queue that hasnt been yoinked
+resource "aws_lambda_event_source_mapping" "scraping_queue_trigger" {
+  event_source_arn = aws_sqs_queue.scraping_queue.arn
+  function_name    = aws_lambda_function.page_scraper.arn
+  batch_size       = 1
+  
+  maximum_batching_window_in_seconds = 0
 
-# Lambda IAM Role
+  scaling_config {
+    maximum_concurrency = 10
+  }
+}
+# ================================================================
+# iam roles and security policies for all resources
+# ================================================================
 resource "aws_iam_role" "lambda_exec" {
   name = "lambda-scraper-role"
 
@@ -235,8 +247,6 @@ resource "aws_iam_role" "lambda_exec" {
     ]
   })
 }
-
-# Lambda IAM Policy for basic execution
 resource "aws_iam_role_policy" "lambda_exec_policy" {
   name = "lambda-scraper-policy"
   role = aws_iam_role.lambda_exec.id
@@ -258,8 +268,6 @@ resource "aws_iam_role_policy" "lambda_exec_policy" {
     ]
   })
 }
-
-# Lambda IAM Policy for SQS access
 resource "aws_iam_role_policy" "lambda_sqs" {
   name = "lambda-sqs-policy"
   role = aws_iam_role.lambda_exec.id
@@ -284,8 +292,6 @@ resource "aws_iam_role_policy" "lambda_sqs" {
     ]
   })
 }
-
-# Lambda IAM Policy for DynamoDB access
 resource "aws_iam_role_policy" "lambda_dynamodb_policy" {
   name = "lambda-dynamodb-sitemap-policy"
   role = aws_iam_role.lambda_exec.id
@@ -310,8 +316,6 @@ resource "aws_iam_role_policy" "lambda_dynamodb_policy" {
     ]
   })
 }
-
-# Lambda IAM Policy for S3 access
 resource "aws_iam_role_policy" "lambda_s3_policy" {
   name = "lambda-s3-policy"
   role = aws_iam_role.lambda_exec.id
@@ -333,27 +337,6 @@ resource "aws_iam_role_policy" "lambda_s3_policy" {
     ]
   })
 }
-
-# Lambda SQS Trigger
-resource "aws_lambda_event_source_mapping" "scraping_queue_trigger" {
-  event_source_arn = aws_sqs_queue.scraping_queue.arn
-  function_name    = aws_lambda_function.page_scraper.arn
-  batch_size       = 1
-  
-  maximum_batching_window_in_seconds = 0
-
-  scaling_config {
-    maximum_concurrency = 10
-  }
-}
-
-# API Gateway CloudWatch Log Group
-resource "aws_cloudwatch_log_group" "api_logs" {
-  name              = "/aws/apigateway/scraping-api"
-  retention_in_days = 14
-}
-
-# API Gateway Role for SQS
 resource "aws_iam_role" "api_gateway_sqs" {
   name = "api-gateway-sqs-role"
 
@@ -370,8 +353,6 @@ resource "aws_iam_role" "api_gateway_sqs" {
     ]
   })
 }
-
-# API Gateway policy for SQS access
 resource "aws_iam_role_policy" "api_gateway_sqs" {
   name = "api-gateway-sqs-policy"
   role = aws_iam_role.api_gateway_sqs.id
@@ -391,8 +372,13 @@ resource "aws_iam_role_policy" "api_gateway_sqs" {
     ]
   })
 }
-
-# API Gateway
+resource "aws_cloudwatch_log_group" "api_logs" {
+  name              = "/aws/apigateway/scraping-api"
+  retention_in_days = 14
+}
+# ================================================================
+# api gateway configuration
+# ================================================================
 resource "aws_api_gateway_rest_api" "scraping_api" {
   name        = "scraping-api"
   description = "API for adding URLs to scraping queue"
@@ -401,13 +387,9 @@ resource "aws_api_gateway_rest_api" "scraping_api" {
     types = ["REGIONAL"]
   }
 }
-
-# API Key
 resource "aws_api_gateway_api_key" "scraping_api_key" {
   name = "scraping-api-key"
 }
-
-# Usage Plan
 resource "aws_api_gateway_usage_plan" "scraping_api_usage_plan" {
   name = "scraping-api-usage-plan"
 
@@ -426,29 +408,22 @@ resource "aws_api_gateway_usage_plan" "scraping_api_usage_plan" {
     rate_limit  = 5
   }
 }
-
-# Key association
 resource "aws_api_gateway_usage_plan_key" "scraping_api_usage_plan_key" {
   key_id        = aws_api_gateway_api_key.scraping_api_key.id
   key_type      = "API_KEY"
   usage_plan_id = aws_api_gateway_usage_plan.scraping_api_usage_plan.id
 }
-
 resource "aws_api_gateway_resource" "scrape" {
   rest_api_id = aws_api_gateway_rest_api.scraping_api.id
   parent_id   = aws_api_gateway_rest_api.scraping_api.root_resource_id
   path_part   = "scrape"
 }
-
-# OPTIONS method for CORS preflight
 resource "aws_api_gateway_method" "scrape_options" {
   rest_api_id   = aws_api_gateway_rest_api.scraping_api.id
   resource_id   = aws_api_gateway_resource.scrape.id
   http_method   = "OPTIONS"
   authorization = "NONE"
 }
-
-# API method
 resource "aws_api_gateway_method" "scrape_post" {
   rest_api_id      = aws_api_gateway_rest_api.scraping_api.id
   resource_id      = aws_api_gateway_resource.scrape.id
@@ -462,16 +437,12 @@ resource "aws_api_gateway_method" "scrape_post" {
     "application/json" = aws_api_gateway_model.scrape_request_model.name
   }
 }
-
-# Request validator
 resource "aws_api_gateway_request_validator" "validator" {
   name                        = "scrape-endpoint-validator"
   rest_api_id                = aws_api_gateway_rest_api.scraping_api.id
   validate_request_body      = true
   validate_request_parameters = true
 }
-
-# Request model
 resource "aws_api_gateway_model" "scrape_request_model" {
   rest_api_id  = aws_api_gateway_rest_api.scraping_api.id
   name         = "ScrapeRequestModel"
@@ -489,8 +460,6 @@ resource "aws_api_gateway_model" "scrape_request_model" {
     }
   })
 }
-
-# OPTIONS method integration (Mock integration for CORS)
 resource "aws_api_gateway_integration" "options_integration" {
   rest_api_id = aws_api_gateway_rest_api.scraping_api.id
   resource_id = aws_api_gateway_resource.scrape.id
@@ -501,8 +470,6 @@ resource "aws_api_gateway_integration" "options_integration" {
     "application/json" = "{\"statusCode\": 200}"
   }
 }
-
-# OPTIONS method response with CORS headers
 resource "aws_api_gateway_method_response" "options_response_200" {
   rest_api_id = aws_api_gateway_rest_api.scraping_api.id
   resource_id = aws_api_gateway_resource.scrape.id
@@ -519,8 +486,6 @@ resource "aws_api_gateway_method_response" "options_response_200" {
     "application/json" = "Empty"
   }
 }
-
-# OPTIONS integration response with CORS headers
 resource "aws_api_gateway_integration_response" "options_integration_response" {
   rest_api_id = aws_api_gateway_rest_api.scraping_api.id
   resource_id = aws_api_gateway_resource.scrape.id
@@ -539,8 +504,6 @@ resource "aws_api_gateway_integration_response" "options_integration_response" {
 
   depends_on = [aws_api_gateway_integration.options_integration]
 }
-
-# API Gateway integration to use the role
 resource "aws_api_gateway_integration" "sqs_integration" {
   rest_api_id             = aws_api_gateway_rest_api.scraping_api.id
   resource_id             = aws_api_gateway_resource.scrape.id
@@ -562,8 +525,6 @@ Action=SendMessage&MessageBody={
 EOF
   }
 }
-
-# Method response
 resource "aws_api_gateway_method_response" "response_200" {
   rest_api_id = aws_api_gateway_rest_api.scraping_api.id
   resource_id = aws_api_gateway_resource.scrape.id
@@ -578,8 +539,6 @@ resource "aws_api_gateway_method_response" "response_200" {
     "application/json" = "Empty"
   }
 }
-
-# Integration response
 resource "aws_api_gateway_integration_response" "integration_response" {
   rest_api_id = aws_api_gateway_rest_api.scraping_api.id
   resource_id = aws_api_gateway_resource.scrape.id
@@ -602,8 +561,6 @@ EOF
 
   depends_on = [aws_api_gateway_integration.sqs_integration]
 }
-
-# API Gateway deployment and stage
 resource "aws_api_gateway_deployment" "api_deployment" {
   rest_api_id = aws_api_gateway_rest_api.scraping_api.id
 
@@ -628,7 +585,6 @@ resource "aws_api_gateway_deployment" "api_deployment" {
     ]))
   }
 }
-
 resource "aws_api_gateway_stage" "prod" {
   deployment_id = aws_api_gateway_deployment.api_deployment.id
   rest_api_id   = aws_api_gateway_rest_api.scraping_api.id
@@ -637,48 +593,41 @@ resource "aws_api_gateway_stage" "prod" {
   access_log_settings {
     destination_arn = aws_cloudwatch_log_group.api_logs.arn
     format = jsonencode({
-      requestId     = "$context.requestId"
-      ip           = "$context.identity.sourceIp"
-      requestTime  = "$context.requestTime"
-      httpMethod   = "$context.httpMethod"
-      resourcePath = "$context.resourcePath"
-      status       = "$context.status"
-      protocol     = "$context.protocol"
-      responseLength = "$context.responseLength"
-      apiKey      = "$context.identity.apiKey"
+      requestId       = "$context.requestId"
+      ip              = "$context.identity.sourceIp"
+      requestTime     = "$context.requestTime"
+      httpMethod      = "$context.httpMethod"
+      resourcePath    = "$context.resourcePath"
+      status          = "$context.status"
+      protocol        = "$context.protocol"
+      responseLength  = "$context.responseLength"
+      apiKey          = "$context.identity.apiKey"
     })
   }
 }
-
-# Data sources
 data "aws_region" "current" {}
 data "aws_caller_identity" "current" {}
 
-# Outputs
+# outputs
 output "api_endpoint" {
   value = "https://${aws_api_gateway_rest_api.scraping_api.id}.execute-api.${data.aws_region.current.name}.amazonaws.com/${aws_api_gateway_stage.prod.stage_name}/scrape"
 }
-
 output "scraping_queue_url" {
   value = aws_sqs_queue.scraping_queue.url
 }
-
 output "api_key" {
   value     = aws_api_gateway_api_key.scraping_api_key.value
   sensitive = true
 }
-
 output "dlq_urls" {
   value = {
     scraping = aws_sqs_queue.scraping_dlq.url
     lambda   = aws_sqs_queue.lambda_dlq.url
   }
 }
-
 output "sitemap_table_name" {
   value = aws_dynamodb_table.sitemap_storage.name
 }
-
 output "s3_bucket_name" {
   value = aws_s3_bucket.scraped_data.id
 }

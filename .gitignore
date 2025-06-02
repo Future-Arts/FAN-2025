@@ -3,7 +3,7 @@
 
 #STOP PUSHING .IDEA FILES PLEASE IT RUINS MY IDE CONFIG
 
-infrastrucure/*.zip
+*.zip
 .venv/
 
 # Terraform config
