@@ -376,6 +376,73 @@ resource "aws_cloudwatch_log_group" "api_logs" {
   name              = "/aws/apigateway/scraping-api"
   retention_in_days = 14
 }
+# IAM Policy for unauthenticated dashboard users - DynamoDB read access
+resource "aws_iam_role_policy" "cognito_unauthenticated_policy" {
+  name = "cognito-dashboard-unauthenticated-policy"
+  role = aws_iam_role.cognito_unauthenticated.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:Scan",
+          "dynamodb:GetItem",
+          "dynamodb:Query"
+        ]
+        Resource = [
+          aws_dynamodb_table.sitemap_storage.arn,
+          "${aws_dynamodb_table.sitemap_storage.arn}/index/*"
+        ]
+      }
+    ]
+  })
+}
+# Cognito Identity Pool for unauthenticated dashboard access
+resource "aws_cognito_identity_pool" "dashboard_identity_pool" {
+  identity_pool_name               = "scraping-dashboard-identity-pool"
+  allow_unauthenticated_identities = true
+  allow_classic_flow              = false
+
+  tags = {
+    Name        = "Scraping Dashboard Identity Pool"
+    Environment = var.environment
+  }
+}
+# IAM Role for unauthenticated users from the identity pool
+resource "aws_iam_role" "cognito_unauthenticated" {
+  name = "cognito-dashboard-unauthenticated-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Federated = "cognito-identity.amazonaws.com"
+        }
+        Action = "sts:AssumeRoleWithWebIdentity"
+        Condition = {
+          StringEquals = {
+            "cognito-identity.amazonaws.com:aud" = aws_cognito_identity_pool.dashboard_identity_pool.id
+          }
+          "ForAnyValue:StringLike" = {
+            "cognito-identity.amazonaws.com:amr" = "unauthenticated"
+          }
+        }
+      }
+    ]
+  })
+}
+# Attach the role to the identity pool
+resource "aws_cognito_identity_pool_roles_attachment" "dashboard_identity_pool_roles" {
+  identity_pool_id = aws_cognito_identity_pool.dashboard_identity_pool.id
+
+  roles = {
+    "unauthenticated" = aws_iam_role.cognito_unauthenticated.arn
+  }
+}
 # ================================================================
 # api gateway configuration
 # ================================================================
@@ -630,4 +697,19 @@ output "sitemap_table_name" {
 }
 output "s3_bucket_name" {
   value = aws_s3_bucket.scraped_data.id
+}
+# Output the Cognito Identity Pool ID for environment variables
+output "cognito_identity_pool_id" {
+  value = aws_cognito_identity_pool.dashboard_identity_pool.id
+  description = "Cognito Identity Pool ID for zero-config dashboard access"
+}
+
+# Update existing sitemap_table_name output to include more context
+output "dashboard_environment_variables" {
+  value = {
+    VITE_AWS_REGION = data.aws_region.current.name
+    VITE_AWS_IDENTITY_POOL_ID = aws_cognito_identity_pool.dashboard_identity_pool.id
+    VITE_SITEMAP_TABLE_NAME = aws_dynamodb_table.sitemap_storage.name
+  }
+  description = "Environment variables to configure in your build process for zero-config access"
 }
