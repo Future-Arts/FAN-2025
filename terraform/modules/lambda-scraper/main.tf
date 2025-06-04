@@ -66,7 +66,7 @@ resource "null_resource" "lambda_build" {
       GIT_COMMIT    = data.external.git_commit.result.commit_hash
     }
     
-    on_failure = "continue"
+    on_failure = continue
   }
 
   depends_on = [null_resource.create_infrastructure_dir]

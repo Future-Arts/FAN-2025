@@ -22,3 +22,12 @@ variable "cognito_identity_pool_id" {
   default     = "*"  # Will be updated after Cognito pool is created
 }
 
+variable "s3_bucket_arn" {
+  description = "ARN of the S3 bucket for Lambda access"
+  type        = string
+}
+
+variable "dynamodb_table_arn" {
+  description = "ARN of the DynamoDB sitemap table"
+  type        = string
+}

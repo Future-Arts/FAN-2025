@@ -119,6 +119,8 @@ module "iam" {
   environment           = var.environment
   aws_region           = var.aws_region
   enable_xray_tracing  = true
+  s3_bucket_arn        = module.storage.scraped_data_bucket_arn
+  dynamodb_table_arn   = aws_dynamodb_table.sitemap_storage.arn
 }
 
 # DynamoDB table for sitemap storage (keep existing name)
@@ -217,33 +219,6 @@ resource "aws_cognito_identity_pool_roles_attachment" "dashboard_identity_pool_r
   roles = {
     "unauthenticated" = module.iam.cognito_unauthenticated_role_arn
   }
-}
-
-# Additional IAM policy for Lambda DynamoDB access
-resource "aws_iam_role_policy" "lambda_dynamodb_policy" {
-  name = "lambda-dynamodb-sitemap-policy"
-  role = module.iam.lambda_execution_role_name
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "dynamodb:PutItem",
-          "dynamodb:GetItem",
-          "dynamodb:UpdateItem",
-          "dynamodb:DeleteItem",
-          "dynamodb:Query",
-          "dynamodb:Scan"
-        ]
-        Resource = [
-          aws_dynamodb_table.sitemap_storage.arn,
-          "${aws_dynamodb_table.sitemap_storage.arn}/index/*"
-        ]
-      }
-    ]
-  })
 }
 
 # Additional IAM policy for Lambda S3 access
