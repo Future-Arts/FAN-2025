@@ -1,59 +1,59 @@
-[0m[1mmodule.page_scraper_lambda.local_file.requirements_fallback[0]: Refreshing state... [id=3f4d9892c33ee46ddcf45c1fa60e1c934a6cd7c4][0m
 [0m[1mnull_resource.create_infrastructure_dir: Refreshing state... [id=9174878446446691509][0m
-[0m[1mmodule.page_scraper_lambda.data.external.git_commit: Reading...[0m[0m
 [0m[1mmodule.page_scraper_lambda.data.external.source_files_hash: Reading...[0m[0m
+[0m[1mmodule.page_scraper_lambda.local_file.requirements_fallback[0]: Refreshing state... [id=3f4d9892c33ee46ddcf45c1fa60e1c934a6cd7c4][0m
+[0m[1mmodule.page_scraper_lambda.data.external.git_commit: Reading...[0m[0m
 [0m[1mmodule.page_scraper_lambda.data.external.git_commit: Read complete after 0s [id=-][0m
-[0m[1mmodule.iam.aws_iam_role_policy.lambda_s3_access: Refreshing state... [id=lambda-scraper-role:lambda-s3-policy][0m
+[0m[1maws_iam_role_policy.cognito_unauthenticated_policy: Refreshing state... [id=cognito-dashboard-unauthenticated-role:cognito-dashboard-unauthenticated-policy][0m
 [0m[1maws_iam_role_policy.api_gateway_sqs: Refreshing state... [id=api-gateway-sqs-role:api-gateway-sqs-policy][0m
+[0m[1maws_iam_role_policy.lambda_dynamodb_policy: Refreshing state... [id=lambda-scraper-role:lambda-dynamodb-sitemap-policy][0m
+[0m[1maws_api_gateway_model.scrape_request_model: Refreshing state... [id=q7uj5e][0m
 [0m[1maws_api_gateway_usage_plan_key.scraping_api_usage_plan_key: Refreshing state... [id=dtue59718e][0m
 [0m[1maws_iam_role_policy.lambda_exec_policy: Refreshing state... [id=lambda-scraper-role:lambda-scraper-policy][0m
-[0m[1maws_api_gateway_model.scrape_request_model: Refreshing state... [id=q7uj5e][0m
-[0m[1maws_iam_role_policy.cognito_unauthenticated_policy: Refreshing state... [id=cognito-dashboard-unauthenticated-role:cognito-dashboard-unauthenticated-policy][0m
 [0m[1maws_cloudwatch_log_group.api_logs: Refreshing state... [id=/aws/apigateway/scraping-api][0m
-[0m[1mmodule.sqs_queues.aws_sqs_queue.scraping_dlq: Refreshing state... [id=https://sqs.us-west-2.amazonaws.com/024611159954/url-scraping-dlq][0m
 [0m[1maws_api_gateway_usage_plan.scraping_api_usage_plan: Refreshing state... [id=k1i3dh][0m
-[0m[1mmodule.iam.aws_iam_role.cognito_unauthenticated: Refreshing state... [id=cognito-dashboard-unauthenticated-role][0m
-[0m[1mmodule.sqs_queues.aws_sqs_queue.lambda_dlq: Refreshing state... [id=https://sqs.us-west-2.amazonaws.com/024611159954/lambda-scraper-dlq][0m
+[0m[1maws_dynamodb_table.sitemap_storage: Refreshing state... [id=website-sitemaps][0m
+[0m[1maws_s3_bucket.terraform_state: Refreshing state... [id=terraform-state-fan2025][0m
+[0m[1mmodule.iam.aws_iam_role.lambda_execution: Refreshing state... [id=lambda-scraper-role][0m
+[0m[1mmodule.page_scraper_lambda.aws_cloudwatch_log_group.lambda_logs: Refreshing state... [id=/aws/lambda/page-scraper][0m
+[0m[1maws_cognito_identity_pool.dashboard_identity_pool: Refreshing state... [id=us-west-2:375a9cf7-6c11-470c-92a2-bd1b62f5a150][0m
+[0m[1mmodule.api_gateway.data.aws_caller_identity.current: Reading...[0m[0m
+[0m[1mmodule.api_gateway.data.aws_caller_identity.current: Read complete after 0s [id=024611159954][0m
 [0m[1mmodule.api_gateway.aws_api_gateway_rest_api.scraping_api: Refreshing state... [id=0p1mp93aa7][0m
-[0m[1maws_dynamodb_table.terraform_state_lock: Refreshing state... [id=terraform-state-lock][0m
+[0m[1mmodule.storage.aws_s3_bucket.scraped_data: Refreshing state... [id=artist-scraped-data][0m
+[0m[1mmodule.sqs_queues.aws_sqs_queue.lambda_dlq: Refreshing state... [id=https://sqs.us-west-2.amazonaws.com/024611159954/lambda-scraper-dlq][0m
+[0m[1mdata.aws_caller_identity.current: Reading...[0m[0m
+[0m[1mmodule.iam.aws_iam_role.cognito_unauthenticated: Refreshing state... [id=cognito-dashboard-unauthenticated-role][0m
+[0m[1mmodule.sqs_queues.aws_sqs_queue.scraping_dlq: Refreshing state... [id=https://sqs.us-west-2.amazonaws.com/024611159954/url-scraping-dlq][0m
 [0m[1mdata.aws_region.current: Reading...[0m[0m
 [0m[1mdata.aws_region.current: Read complete after 0s [id=us-west-2][0m
-[0m[1mmodule.iam.aws_iam_role.api_gateway_sqs: Refreshing state... [id=api-gateway-sqs-role][0m
-[0m[1maws_s3_bucket.terraform_state: Refreshing state... [id=terraform-state-fan2025][0m
-[0m[1maws_dynamodb_table.sitemap_storage: Refreshing state... [id=website-sitemaps][0m
-[0m[1mdata.aws_caller_identity.current: Reading...[0m[0m
 [0m[1mmodule.api_gateway.data.aws_region.current: Reading...[0m[0m
 [0m[1mmodule.api_gateway.data.aws_region.current: Read complete after 0s [id=us-west-2][0m
-[0m[1mmodule.iam.aws_iam_role.lambda_execution: Refreshing state... [id=lambda-scraper-role][0m
-[0m[1mmodule.storage.aws_s3_bucket.scraped_data: Refreshing state... [id=artist-scraped-data][0m
-[0m[1maws_cognito_identity_pool.dashboard_identity_pool: Refreshing state... [id=us-west-2:375a9cf7-6c11-470c-92a2-bd1b62f5a150][0m
-[0m[1mmodule.page_scraper_lambda.data.external.source_files_hash: Read complete after 1s [id=-][0m
-[0m[1mmodule.api_gateway.data.aws_caller_identity.current: Reading...[0m[0m
-[0m[1mdata.aws_caller_identity.current: Read complete after 0s [id=024611159954][0m
-[0m[1mmodule.page_scraper_lambda.aws_cloudwatch_log_group.lambda_logs: Refreshing state... [id=/aws/lambda/page-scraper][0m
-[0m[1mmodule.api_gateway.data.aws_caller_identity.current: Read complete after 0s [id=024611159954][0m
 [0m[1mmodule.api_gateway.aws_api_gateway_api_key.scraping_api_key[0]: Refreshing state... [id=dtue59718e][0m
-[0m[1mmodule.sqs_queues.aws_sqs_queue.scraping_queue: Refreshing state... [id=https://sqs.us-west-2.amazonaws.com/024611159954/url-scraping-queue][0m
-[0m[1mmodule.api_gateway.aws_api_gateway_request_validator.validator: Refreshing state... [id=ypbfwu][0m
+[0m[1mdata.aws_caller_identity.current: Read complete after 0s [id=024611159954][0m
+[0m[1mmodule.iam.aws_iam_role.api_gateway_sqs: Refreshing state... [id=api-gateway-sqs-role][0m
+[0m[1maws_dynamodb_table.terraform_state_lock: Refreshing state... [id=terraform-state-lock][0m
+[0m[1mmodule.page_scraper_lambda.data.external.source_files_hash: Read complete after 0s [id=-][0m
 [0m[1mmodule.api_gateway.aws_api_gateway_resource.scrape: Refreshing state... [id=a8436r][0m
-[0m[1mmodule.page_scraper_lambda.null_resource.lambda_build: Refreshing state... [id=3976690920238509013][0m
+[0m[1mmodule.api_gateway.aws_api_gateway_request_validator.validator: Refreshing state... [id=ypbfwu][0m
 [0m[1mmodule.api_gateway.aws_api_gateway_method.scrape_options[0]: Refreshing state... [id=agm-0p1mp93aa7-a8436r-OPTIONS][0m
 [0m[1mmodule.api_gateway.aws_api_gateway_method.scrape_post: Refreshing state... [id=agm-0p1mp93aa7-a8436r-POST][0m
-[0m[1mmodule.api_gateway.aws_api_gateway_method_response.options_response_200[0]: Refreshing state... [id=agmr-0p1mp93aa7-a8436r-OPTIONS-200][0m
+[0m[1mmodule.sqs_queues.aws_sqs_queue.scraping_queue: Refreshing state... [id=https://sqs.us-west-2.amazonaws.com/024611159954/url-scraping-queue][0m
 [0m[1mmodule.api_gateway.aws_api_gateway_integration.options_integration[0]: Refreshing state... [id=agi-0p1mp93aa7-a8436r-OPTIONS][0m
+[0m[1mmodule.api_gateway.aws_api_gateway_method_response.options_response_200[0]: Refreshing state... [id=agmr-0p1mp93aa7-a8436r-OPTIONS-200][0m
+[0m[1mmodule.page_scraper_lambda.null_resource.lambda_build: Refreshing state... [id=3976690920238509013][0m
 [0m[1mmodule.api_gateway.aws_api_gateway_method_response.response_200: Refreshing state... [id=agmr-0p1mp93aa7-a8436r-POST-200][0m
 [0m[1mmodule.api_gateway.aws_api_gateway_integration_response.options_integration_response[0]: Refreshing state... [id=agir-0p1mp93aa7-a8436r-OPTIONS-200][0m
 [0m[1maws_s3_bucket_versioning.terraform_state_versioning: Refreshing state... [id=terraform-state-fan2025][0m
 [0m[1maws_s3_bucket_server_side_encryption_configuration.terraform_state_encryption: Refreshing state... [id=terraform-state-fan2025][0m
 [0m[1maws_cognito_identity_pool_roles_attachment.dashboard_identity_pool_roles: Refreshing state... [id=us-west-2:375a9cf7-6c11-470c-92a2-bd1b62f5a150][0m
-[0m[1mmodule.api_gateway.aws_api_gateway_integration.sqs_integration: Refreshing state... [id=agi-0p1mp93aa7-a8436r-POST][0m
 [0m[1mmodule.storage.aws_s3_bucket_server_side_encryption_configuration.scraped_data_encryption[0]: Refreshing state... [id=artist-scraped-data][0m
 [0m[1mmodule.storage.aws_s3_bucket_versioning.scraped_data_versioning[0]: Refreshing state... [id=artist-scraped-data][0m
+[0m[1mmodule.api_gateway.aws_api_gateway_integration.sqs_integration: Refreshing state... [id=agi-0p1mp93aa7-a8436r-POST][0m
 [0m[1mmodule.api_gateway.aws_api_gateway_integration_response.integration_response: Refreshing state... [id=agir-0p1mp93aa7-a8436r-POST-200][0m
 [0m[1mmodule.api_gateway.aws_api_gateway_deployment.api_deployment: Refreshing state... [id=iaa80m][0m
 [0m[1mmodule.api_gateway.aws_api_gateway_stage.prod: Refreshing state... [id=ags-0p1mp93aa7-prod][0m
 [0m[1mmodule.iam.aws_iam_role_policy.lambda_sqs_access: Refreshing state... [id=lambda-scraper-role:lambda-sqs-policy][0m
-[0m[1maws_iam_role_policy.lambda_dynamodb_policy: Refreshing state... [id=lambda-scraper-role:lambda-dynamodb-sitemap-policy][0m
+[0m[1maws_iam_role_policy.lambda_s3_policy: Refreshing state... [id=lambda-scraper-role:lambda-s3-policy][0m
 [0m[1mmodule.page_scraper_lambda.aws_lambda_function.scraper: Refreshing state... [id=page-scraper][0m
 [0m[1mmodule.page_scraper_lambda.aws_lambda_event_source_mapping.sqs_trigger[0]: Refreshing state... [id=8dbbde88-8512-4817-906c-0311b4c34e30][0m
 
@@ -230,25 +230,34 @@ Terraform will perform the following actions:
         [90m# (1 unchanged attribute hidden)[0m[0m
     }
 
-[1m  # aws_iam_role_policy.lambda_dynamodb_policy[0m will be updated in-place
-[0m  [33m~[0m[0m resource "aws_iam_role_policy" "lambda_dynamodb_policy" {
-        id          = "lambda-scraper-role:lambda-dynamodb-sitemap-policy"
-        name        = "lambda-dynamodb-sitemap-policy"
-      [33m~[0m[0m policy      = jsonencode(
-          [33m~[0m[0m {
-              [33m~[0m[0m Statement = [
-                  [33m~[0m[0m {
-                      [33m~[0m[0m Resource = [
-                            "arn:aws:dynamodb:us-west-2:024611159954:table/website-sitemaps",
-                          [32m+[0m[0m "arn:aws:dynamodb:us-west-2:024611159954:table/website-sitemaps/index/*",
+[1m  # aws_iam_role_policy.lambda_dynamodb_policy[0m will be [1m[31mdestroyed[0m
+  # (because aws_iam_role_policy.lambda_dynamodb_policy is not in configuration)
+[0m  [31m-[0m[0m resource "aws_iam_role_policy" "lambda_dynamodb_policy" {
+      [31m-[0m[0m id          = "lambda-scraper-role:lambda-dynamodb-sitemap-policy" [90m-> null[0m[0m
+      [31m-[0m[0m name        = "lambda-dynamodb-sitemap-policy" [90m-> null[0m[0m
+      [31m-[0m[0m policy      = jsonencode(
+            {
+              [31m-[0m[0m Statement = [
+                  [31m-[0m[0m {
+                      [31m-[0m[0m Action   = [
+                          [31m-[0m[0m "dynamodb:PutItem",
+                          [31m-[0m[0m "dynamodb:GetItem",
+                          [31m-[0m[0m "dynamodb:UpdateItem",
+                          [31m-[0m[0m "dynamodb:DeleteItem",
+                          [31m-[0m[0m "dynamodb:Query",
+                          [31m-[0m[0m "dynamodb:Scan",
                         ]
-                        [90m# (2 unchanged attributes hidden)[0m[0m
+                      [31m-[0m[0m Effect   = "Allow"
+                      [31m-[0m[0m Resource = [
+                          [31m-[0m[0m "arn:aws:dynamodb:us-west-2:024611159954:table/website-sitemaps",
+                        ]
                     },
                 ]
-                [90m# (1 unchanged attribute hidden)[0m[0m
+              [31m-[0m[0m Version   = "2012-10-17"
             }
-        )
-        [90m# (2 unchanged attributes hidden)[0m[0m
+        ) [90m-> null[0m[0m
+      [31m-[0m[0m role        = "lambda-scraper-role" [90m-> null[0m[0m
+        [90m# (1 unchanged attribute hidden)[0m[0m
     }
 
 [1m  # aws_iam_role_policy.lambda_exec_policy[0m will be [1m[31mdestroyed[0m
@@ -276,32 +285,6 @@ Terraform will perform the following actions:
         ) [90m-> null[0m[0m
       [31m-[0m[0m role        = "lambda-scraper-role" [90m-> null[0m[0m
         [90m# (1 unchanged attribute hidden)[0m[0m
-    }
-
-[1m  # aws_iam_role_policy.lambda_s3_policy[0m will be created
-[0m  [32m+[0m[0m resource "aws_iam_role_policy" "lambda_s3_policy" {
-      [32m+[0m[0m id          = (known after apply)
-      [32m+[0m[0m name        = "lambda-s3-policy"
-      [32m+[0m[0m name_prefix = (known after apply)
-      [32m+[0m[0m policy      = jsonencode(
-            {
-              [32m+[0m[0m Statement = [
-                  [32m+[0m[0m {
-                      [32m+[0m[0m Action   = [
-                          [32m+[0m[0m "s3:GetObject",
-                          [32m+[0m[0m "s3:PutObject",
-                          [32m+[0m[0m "s3:DeleteObject",
-                        ]
-                      [32m+[0m[0m Effect   = "Allow"
-                      [32m+[0m[0m Resource = [
-                          [32m+[0m[0m "arn:aws:s3:::artist-scraped-data/*",
-                        ]
-                    },
-                ]
-              [32m+[0m[0m Version   = "2012-10-17"
-            }
-        )
-      [32m+[0m[0m role        = "lambda-scraper-role"
     }
 
 [1m  # null_resource.create_infrastructure_dir[0m will be [1m[31mdestroyed[0m
@@ -552,31 +535,34 @@ Terraform will perform the following actions:
       [32m+[0m[0m role        = "lambda-scraper-role"
     }
 
-[1m  # module.iam.aws_iam_role_policy.lambda_s3_access[0m will be [1m[31mdestroyed[0m
-  # (because aws_iam_role_policy.lambda_s3_access is not in configuration)
-[0m  [31m-[0m[0m resource "aws_iam_role_policy" "lambda_s3_access" {
-      [31m-[0m[0m id          = "lambda-scraper-role:lambda-s3-policy" [90m-> null[0m[0m
-      [31m-[0m[0m name        = "lambda-s3-policy" [90m-> null[0m[0m
-      [31m-[0m[0m policy      = jsonencode(
+[1m  # module.iam.aws_iam_role_policy.lambda_dynamodb_policy[0m will be created
+[0m  [32m+[0m[0m resource "aws_iam_role_policy" "lambda_dynamodb_policy" {
+      [32m+[0m[0m id          = (known after apply)
+      [32m+[0m[0m name        = "lambda-dynamodb-sitemap-policy"
+      [32m+[0m[0m name_prefix = (known after apply)
+      [32m+[0m[0m policy      = jsonencode(
             {
-              [31m-[0m[0m Statement = [
-                  [31m-[0m[0m {
-                      [31m-[0m[0m Action   = [
-                          [31m-[0m[0m "s3:GetObject",
-                          [31m-[0m[0m "s3:PutObject",
-                          [31m-[0m[0m "s3:DeleteObject",
+              [32m+[0m[0m Statement = [
+                  [32m+[0m[0m {
+                      [32m+[0m[0m Action   = [
+                          [32m+[0m[0m "dynamodb:PutItem",
+                          [32m+[0m[0m "dynamodb:GetItem",
+                          [32m+[0m[0m "dynamodb:UpdateItem",
+                          [32m+[0m[0m "dynamodb:DeleteItem",
+                          [32m+[0m[0m "dynamodb:Query",
+                          [32m+[0m[0m "dynamodb:Scan",
                         ]
-                      [31m-[0m[0m Effect   = "Allow"
-                      [31m-[0m[0m Resource = [
-                          [31m-[0m[0m "arn:aws:s3:::artist-scraped-data/*",
+                      [32m+[0m[0m Effect   = "Allow"
+                      [32m+[0m[0m Resource = [
+                          [32m+[0m[0m "arn:aws:dynamodb:us-west-2:024611159954:table/website-sitemaps",
+                          [32m+[0m[0m "arn:aws:dynamodb:us-west-2:024611159954:table/website-sitemaps/index/*",
                         ]
                     },
                 ]
-              [31m-[0m[0m Version   = "2012-10-17"
+              [32m+[0m[0m Version   = "2012-10-17"
             }
-        ) [90m-> null[0m[0m
-      [31m-[0m[0m role        = "lambda-scraper-role" [90m-> null[0m[0m
-        [90m# (1 unchanged attribute hidden)[0m[0m
+        )
+      [32m+[0m[0m role        = "lambda-scraper-role"
     }
 
 [1m  # module.iam.aws_iam_role_policy.lambda_sqs_access[0m will be updated in-place
@@ -646,12 +632,12 @@ Terraform will perform the following actions:
         name              = "/aws/lambda/page-scraper"
       [33m~[0m[0m tags              = {
           [32m+[0m[0m "Environment" = "prod"
-          [32m+[0m[0m "GitCommit"   = "30055420b938a0b9dba4f45217980cbb798c2d93"
+          [32m+[0m[0m "GitCommit"   = "0ce45e9e642c36df4d0fc819063efbfba77ab78c"
           [32m+[0m[0m "Name"        = "page-scraper-logs"
         }
       [33m~[0m[0m tags_all          = {
           [32m+[0m[0m "Environment" = "prod"
-          [32m+[0m[0m "GitCommit"   = "30055420b938a0b9dba4f45217980cbb798c2d93"
+          [32m+[0m[0m "GitCommit"   = "0ce45e9e642c36df4d0fc819063efbfba77ab78c"
           [32m+[0m[0m "Name"        = "page-scraper-logs"
         }
         [90m# (6 unchanged attributes hidden)[0m[0m
@@ -692,7 +678,7 @@ Terraform will perform the following actions:
       [33m~[0m[0m triggers = { [31m# forces replacement[0m[0m
           [33m~[0m[0m "build_script"     = "niStsgJNetKdoLxcp+8/Gfb4lItuy5Wwor5MMYNodFw=" [33m->[0m[0m "ce70031b985958a7bdd743f14a416065"
           [32m+[0m[0m "environment_vars" = "c596f2c66e8208c05242718e118c746e"
-          [32m+[0m[0m "git_commit"       = "30055420b938a0b9dba4f45217980cbb798c2d93"
+          [32m+[0m[0m "git_commit"       = "0ce45e9e642c36df4d0fc819063efbfba77ab78c"
           [31m-[0m[0m "python_code"      = "R7riJwfup7W5JbcFtrOMCV/aI0+SGwxD96zIRx+UoHs=" [90m-> null[0m[0m
           [33m~[0m[0m "requirements"     = <<-EOT
               [31m-[0m[0m requests==2.31.0
@@ -887,7 +873,7 @@ Terraform will perform the following actions:
         [90m# (1 unchanged block hidden)[0m[0m
     }
 
-[1mPlan:[0m 16 to add, 14 to change, 11 to destroy.
+[1mPlan:[0m 16 to add, 13 to change, 11 to destroy.
 [0m
 Changes to Outputs:
   [31m-[0m[0m cognito_unauthenticated_role_arn = "arn:aws:iam::024611159954:role/cognito-dashboard-unauthenticated-role" [90m-> null[0m[0m
