@@ -7,6 +7,7 @@
 .terraform
 *.tfstate
 *.tfstate.*
+*.tfstate.backup
 *.lock.hcl
 terraform.tfplan
 terraform.tfplan.*
@@ -16,9 +17,15 @@ crash.*.log
 # NEVER commit these files - they contain secrets!
 **/*.tfstate
 **/*.tfstate.*
+**/*.tfstate.backup
 **/.terraform/
 **/terraform.tfplan
 **/terraform.tfplan.*
+**/.terraform.tfstate.lock.info
+
+# Terraform lock files (contain sensitive session info)
+.terraform.tfstate.lock.info
+.terraform.lock.info
 
 # Logs
 logs

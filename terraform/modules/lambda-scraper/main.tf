@@ -148,15 +148,7 @@ resource "aws_lambda_function" "scraper" {
   environment {
     variables = var.environment_variables
   }
-  
-  # Lifecycle management for stable deployments
-  lifecycle {
-    ignore_changes = [
-      last_modified,
-      version
-    ]
-  }
-  
+ 
   depends_on = [
     aws_cloudwatch_log_group.lambda_logs,
     null_resource.lambda_build
