@@ -6,10 +6,22 @@
 *.zip
 .venv/
 
-# Terraform config
+# Terraform config - SECURITY CRITICAL
 .terraform
 *.tfstate
+*.tfstate.*
 *.lock.hcl
+terraform.tfplan
+terraform.tfplan.*
+crash.log
+crash.*.log
+
+# NEVER commit these files - they contain secrets!
+**/*.tfstate
+**/*.tfstate.*
+**/.terraform/
+**/terraform.tfplan
+**/terraform.tfplan.*
 
 # Logs
 logs
@@ -146,3 +158,13 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# Modern Terraform structure - additional security
+environments/**/terraform.tfvars.backup
+environments/**/.terraform/
+applications/*/src/.venv/
+**/lambda_function.zip
+**/build/
+
+# Backup directories from migration
+backup_*/
