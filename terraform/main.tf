@@ -89,68 +89,20 @@ resource "aws_dynamodb_table" "terraform_state_lock" {
 # ENHANCED DYNAMODB TABLE FOR 3D VISUALIZATION
 # ================================================================
 
-# Enhanced DynamoDB table with adjacency list pattern for 3D force graphs
+# Simple DynamoDB table for website sitemap storage
 resource "aws_dynamodb_table" "website_sitemaps" {
   name           = "website-sitemaps"  # Synchronized with IAM policies and other references
   billing_mode   = var.enable_provisioned_capacity ? "PROVISIONED" : "PAY_PER_REQUEST"
-  hash_key       = "PK"
-  range_key      = "SK"
+  hash_key       = "website_domain"
 
   # Provisioned capacity for cost optimization (when enabled)
   read_capacity  = var.enable_provisioned_capacity ? var.read_capacity_units : null
   write_capacity = var.enable_provisioned_capacity ? var.write_capacity_units : null
 
-  # Enhanced schema for 3D visualization
+  # Simple schema matching scraper application expectations
   attribute {
-    name = "PK"
+    name = "website_domain"
     type = "S"
-  }
-
-  attribute {
-    name = "SK"
-    type = "S"
-  }
-
-  attribute {
-    name = "GSI1PK"
-    type = "S"
-  }
-
-  attribute {
-    name = "GSI1SK"
-    type = "S"
-  }
-
-  attribute {
-    name = "GSI2PK"
-    type = "S"
-  }
-
-  attribute {
-    name = "GSI2SK"
-    type = "S"
-  }
-
-  # GSI1: For status and timestamp queries (3D visualization filtering)
-  global_secondary_index {
-    name            = "GSI1"
-    hash_key        = "GSI1PK"
-    range_key       = "GSI1SK"
-    projection_type = "ALL"
-    
-    read_capacity  = var.enable_provisioned_capacity ? var.gsi_read_capacity_units : null
-    write_capacity = var.enable_provisioned_capacity ? var.gsi_write_capacity_units : null
-  }
-
-  # GSI2: For domain-based analysis (3D visualization navigation)
-  global_secondary_index {
-    name            = "GSI2"
-    hash_key        = "GSI2PK"
-    range_key       = "GSI2SK"
-    projection_type = "ALL"
-    
-    read_capacity  = var.enable_provisioned_capacity ? var.gsi_read_capacity_units : null
-    write_capacity = var.enable_provisioned_capacity ? var.gsi_write_capacity_units : null
   }
 
   # Enhanced monitoring for 3D visualization performance
@@ -162,7 +114,7 @@ resource "aws_dynamodb_table" "website_sitemaps" {
     Name                = "Website Sitemaps"
     Environment         = var.environment
     Purpose             = "3D Force Graph Data Storage"
-    OptimizedFor        = "AdjacencyListPattern"
+    OptimizedFor        = "SimpleSchema"
     VisualizationType   = "3D Force Graph"
   }
 }
