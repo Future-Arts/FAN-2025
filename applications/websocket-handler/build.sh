@@ -1,5 +1,5 @@
 #!/bin/bash
-# Modern Lambda build script with error handling and cross-platform compatibility
+# Build script for WebSocket Lambda handler
 set -euo pipefail
 
 # Color output for better visibility
@@ -39,7 +39,6 @@ trap 'handle_error $LINENO' ERR
 BUILD_ENV=${BUILD_ENV:-"development"}
 AWS_REGION=${AWS_REGION:-"us-west-2"}
 SOURCE_PATH=${SOURCE_PATH:-"$(dirname "$0")/src"}
-
 GIT_COMMIT=${GIT_COMMIT:-"unknown"}
 
 # Get the directory where this script is located
@@ -54,25 +53,24 @@ if [ -n "${OUTPUT_PATH:-}" ]; then
         OUTPUT_PATH="$(pwd)/$OUTPUT_PATH"
     fi
 else
-    OUTPUT_PATH="$SCRIPT_DIR/../../infrastructure/lambda_function.zip"
+    OUTPUT_PATH="$SCRIPT_DIR/../../infrastructure/websocket_function.zip"
 fi
 
-log_info "Build script started from: $SCRIPT_DIR"
+log_info "WebSocket build script started from: $SCRIPT_DIR"
 log_info "Source directory: $SOURCE_DIR"
 log_info "Requirements file: $REQUIREMENTS_FILE"
 log_info "Output path: $OUTPUT_PATH"
 
-# Detect operating system for cross-platform compatibility
-detect_os() {
-    case "$(uname -s)" in
-        Linux*)     MACHINE=Linux;;
-        Darwin*)    MACHINE=Mac;;
-        CYGWIN*)    MACHINE=Cygwin;;
-        MINGW*)     MACHINE=MinGw;;
-        MSYS*)      MACHINE=Msys;;
-        *)          MACHINE="UNKNOWN:$(uname -s)"
-    esac
-    log_info "Detected OS: $MACHINE"
+# Create requirements.txt if it doesn't exist
+ensure_requirements() {
+    if [ ! -f "$REQUIREMENTS_FILE" ]; then
+        log_warning "requirements.txt not found, creating minimal requirements"
+        cat > "$REQUIREMENTS_FILE" << EOF
+boto3==1.34.0
+botocore==1.34.0
+EOF
+    fi
+    log_info "Requirements file exists: $REQUIREMENTS_FILE"
 }
 
 # Python environment setup
@@ -95,8 +93,8 @@ setup_python_env() {
     fi
     
     # Activate virtual environment
-    case $MACHINE in
-        Cygwin|MinGw|Msys)
+    case "$(uname -s)" in
+        CYGWIN*|MINGW*|MSYS*)
             source "$SOURCE_DIR/.venv/Scripts/activate"
             ;;
         *)
@@ -108,20 +106,7 @@ setup_python_env() {
     python -m pip install --upgrade pip --quiet --disable-pip-version-check
 }
 
-# Create requirements.txt if it doesn't exist
-ensure_requirements() {
-    if [ ! -f "$REQUIREMENTS_FILE" ]; then
-        log_warning "requirements.txt not found, creating minimal requirements"
-        cat > "$REQUIREMENTS_FILE" << EOF
-requests==2.31.0
-beautifulsoup4==4.12.2
-boto3==1.34.0
-EOF
-    fi
-    log_info "Requirements file exists: $REQUIREMENTS_FILE"
-}
-
-# Dependency installation with optimizations
+# Dependency installation
 install_dependencies() {
     log_info "Installing dependencies..."
     
@@ -142,7 +127,7 @@ install_dependencies() {
     echo "$tmp_build_dir"
 }
 
-# Source code copying with validation
+# Source code copying
 copy_source_code() {
     local build_dir="$1"
     log_info "Copying source code..."
@@ -157,8 +142,8 @@ copy_source_code() {
     find "$SOURCE_DIR" -name "*.py" -exec cp {} "$build_dir/" \;
     
     # Validate main handler exists
-    if [ ! -f "$build_dir/pagescraper.py" ]; then
-        log_error "Main handler file (pagescraper.py) not found"
+    if [ ! -f "$build_dir/websocket_handler.py" ]; then
+        log_error "Main handler file (websocket_handler.py) not found"
         exit 1
     fi
     
@@ -169,7 +154,7 @@ copy_source_code() {
     "build_env": "$BUILD_ENV",
     "git_commit": "$GIT_COMMIT",
     "python_version": "$PYTHON_VERSION",
-    "machine": "$MACHINE"
+    "component": "websocket-handler"
 }
 EOF
     
@@ -197,7 +182,7 @@ optimize_package() {
     log_success "Package optimized"
 }
 
-# ZIP creation with validation
+# ZIP creation
 create_zip_package() {
     local build_dir="$1"
     log_info "Creating deployment package..."
@@ -214,17 +199,8 @@ create_zip_package() {
     if command -v zip &> /dev/null; then
         zip -r "$OUTPUT_PATH" . -x "*.pyc" "*/__pycache__/*" > /dev/null
     else
-        # Fallback for systems without zip
-        case $MACHINE in
-            Mac|Linux)
-                tar -czf "${OUTPUT_PATH%.zip}.tar.gz" .
-                log_warning "Created tar.gz instead of zip (zip command not available)"
-                ;;
-            *)
-                log_error "No suitable archive tool found"
-                exit 1
-                ;;
-        esac
+        log_error "zip command not found"
+        exit 1
     fi
     
     cd - > /dev/null
@@ -261,12 +237,11 @@ cleanup() {
 
 # Main build process
 main() {
-    log_info "Starting Lambda build process..."
+    log_info "Starting WebSocket Lambda build process..."
     log_info "Build environment: $BUILD_ENV"
     log_info "Git commit: $GIT_COMMIT"
     log_info "AWS region: $AWS_REGION"
     
-    detect_os
     ensure_requirements
     setup_python_env
     
@@ -277,7 +252,7 @@ main() {
     
     cleanup
     
-    log_success "Lambda build completed successfully!"
+    log_success "WebSocket Lambda build completed successfully!"
     log_info "Package location: $OUTPUT_PATH"
 }
 

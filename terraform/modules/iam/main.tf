@@ -247,3 +247,124 @@ resource "aws_iam_role_policy" "lambda_s3_policy" {
     ]
   })
 }
+
+# Add these resources to your existing terraform/modules/iam/main.tf file
+
+# ================================================================
+# WEBSOCKET LAMBDA ROLE AND POLICIES
+# ================================================================
+
+# WebSocket Lambda execution role
+resource "aws_iam_role" "websocket_lambda_execution" {
+  name = "websocket-lambda-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = {
+    Name        = "WebSocket Lambda Execution Role"
+    Environment = var.environment
+  }
+}
+
+# Basic execution policy for WebSocket Lambda
+resource "aws_iam_role_policy" "websocket_lambda_basic_execution" {
+  name = "websocket-lambda-basic-policy"
+  role = aws_iam_role.websocket_lambda_execution.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = "arn:aws:logs:${var.aws_region}:*:log-group:/aws/lambda/*websocket*:*"
+      }
+    ]
+  })
+}
+
+# DynamoDB access for WebSocket connections
+resource "aws_iam_role_policy" "websocket_lambda_dynamodb_policy" {
+  name = "websocket-lambda-dynamodb-policy"
+  role = aws_iam_role.websocket_lambda_execution.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:PutItem",
+          "dynamodb:GetItem",
+          "dynamodb:UpdateItem",
+          "dynamodb:DeleteItem",
+          "dynamodb:Query",
+          "dynamodb:Scan"
+        ]
+        Resource = [
+          "arn:aws:dynamodb:${var.aws_region}:*:table/*websocket-connections*",
+          "arn:aws:dynamodb:${var.aws_region}:*:table/*websocket-connections*/index/*"
+        ]
+      }
+    ]
+  })
+}
+
+# API Gateway Management API access for WebSocket broadcasting
+resource "aws_iam_role_policy" "websocket_lambda_apigateway_policy" {
+  name = "websocket-lambda-apigateway-policy"
+  role = aws_iam_role.websocket_lambda_execution.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "execute-api:ManageConnections"
+        ]
+        Resource = "arn:aws:execute-api:${var.aws_region}:*:*/*/*"
+      }
+    ]
+  })
+}
+
+# ================================================================
+# UPDATE EXISTING LAMBDA ROLE FOR WEBSOCKET INVOCATION
+# ================================================================
+
+# Add WebSocket broadcaster invocation permissions to existing scraping Lambda
+resource "aws_iam_role_policy" "lambda_websocket_invoke_policy" {
+  name = "lambda-websocket-invoke-policy"
+  role = aws_iam_role.lambda_execution.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "lambda:InvokeFunction"
+        ]
+        Resource = [
+          "arn:aws:lambda:${var.aws_region}:*:function:*websocket-broadcaster*"
+        ]
+      }
+    ]
+  })
+}

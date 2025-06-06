@@ -274,6 +274,11 @@ module "page_scraper_lambda" {
     MAX_NODES_PER_WEBSITE     = var.max_nodes_per_website
     ENABLE_PROGRESSIVE_LOADING = "true"
     VISUALIZATION_MODE         = "3D_FORCE_GRAPH"
+
+    # WebSocket broadcasting
+    WEBSOCKET_BROADCASTER_FUNCTION_NAME = module.websocket.websocket_broadcaster_function_name
+    WEBSOCKET_API_ENDPOINT              = module.websocket.websocket_api_endpoint
+    ENABLE_WEBSOCKET_UPDATES            = "true"
   }
 }
 
@@ -315,6 +320,40 @@ module "monitoring" {
   # Notification settings (optional)
   notification_email = ""  # Set to your email if you want notifications
 }
+
+# Build WebSocket Lambda package
+resource "null_resource" "websocket_build" {
+  triggers = {
+    # Force rebuild when source files change
+    source_hash = filemd5("${path.module}/../applications/websocket-handler/src/websocket_handler.py")
+    build_script = filemd5("${path.module}/../applications/websocket-handler/build.sh")
+    requirements = filemd5("${path.module}/../applications/websocket-handler/requirements.txt")
+  }
+
+  provisioner "local-exec" {
+    command = "chmod +x ${path.module}/../applications/websocket-handler/build.sh && ${path.module}/../applications/websocket-handler/build.sh"
+    environment = {
+      BUILD_ENV   = var.environment
+      AWS_REGION  = var.aws_region
+      OUTPUT_PATH = "${path.module}/../infrastructure/websocket_function.zip"
+    }
+  }
+}
+
+# WebSocket module for real-time dashboard updates
+module "websocket" {
+  source = "./modules/websocket"
+  
+  environment                = var.environment
+  websocket_lambda_role_arn  = module.iam.websocket_lambda_role_arn
+  websocket_package_path     = "${path.module}/../infrastructure/websocket_function.zip"
+  log_retention_days         = var.log_retention_days
+  stage_name                 = var.environment
+  
+  depends_on = [null_resource.websocket_build]
+}
+
+
 # ================================================================
 # COGNITO ROLE ATTACHMENTS
 # ================================================================

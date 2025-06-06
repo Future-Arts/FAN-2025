@@ -39,11 +39,41 @@ output "cognito_identity_pool_id" {
   value       = aws_cognito_identity_pool.dashboard_identity_pool.id
 }
 
+# Add these outputs to your existing terraform/outputs.tf file
+
+output "websocket_api_endpoint" {
+  description = "WebSocket API endpoint URL for real-time updates"
+  value       = module.websocket.websocket_api_endpoint
+}
+
+output "websocket_api_id" {
+  description = "WebSocket API ID"
+  value       = module.websocket.websocket_api_id
+}
+
 output "dashboard_environment_variables" {
-  description = "Environment variables for dashboard configuration"
+  description = "Environment variables for dashboard configuration (enhanced with WebSocket)"
   value = {
     VITE_AWS_REGION           = data.aws_region.current.name
     VITE_AWS_IDENTITY_POOL_ID = aws_cognito_identity_pool.dashboard_identity_pool.id
     VITE_SITEMAP_TABLE_NAME   = aws_dynamodb_table.website_sitemaps.name
+    VITE_WEBSOCKET_ENDPOINT   = module.websocket.websocket_api_endpoint
+    VITE_API_ENDPOINT         = module.api_gateway.api_endpoint_url
+  }
+}
+
+output "websocket_connections_table_name" {
+  description = "WebSocket connections DynamoDB table name"
+  value       = module.websocket.connections_table_name
+}
+
+output "real_time_dashboard_setup" {
+  description = "Complete setup information for real-time dashboard"
+  value = {
+    websocket_endpoint        = module.websocket.websocket_api_endpoint
+    api_endpoint             = module.api_gateway.api_endpoint_url
+    cognito_identity_pool_id = aws_cognito_identity_pool.dashboard_identity_pool.id
+    dynamodb_table_name      = aws_dynamodb_table.website_sitemaps.name
+    region                   = data.aws_region.current.name
   }
 }
