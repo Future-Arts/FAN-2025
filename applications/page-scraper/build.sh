@@ -38,26 +38,32 @@ trap 'handle_error $LINENO' ERR
 # Environment variables with defaults
 BUILD_ENV=${BUILD_ENV:-"development"}
 AWS_REGION=${AWS_REGION:-"us-west-2"}
-SOURCE_PATH=${SOURCE_PATH:-"$(dirname "$0")/src"}
-
 GIT_COMMIT=${GIT_COMMIT:-"unknown"}
 
-# Get the directory where this script is located
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SOURCE_DIR="$SCRIPT_DIR/src"
-REQUIREMENTS_FILE="$SCRIPT_DIR/requirements.txt"
-
-# Handle OUTPUT_PATH - if relative, resolve from current working directory, not script directory
-if [ -n "${OUTPUT_PATH:-}" ]; then
-    # If OUTPUT_PATH is relative, make it absolute from current working directory
-    if [[ ! "$OUTPUT_PATH" = /* ]]; then
-        OUTPUT_PATH="$(pwd)/$OUTPUT_PATH"
-    fi
+# Use absolute paths provided by Terraform, or fall back to relative paths
+if [ -n "${FAN_ROOT:-}" ]; then
+    # Running from Terraform with absolute paths
+    SOURCE_DIR="${SOURCE_PATH}"
+    REQUIREMENTS_FILE="${FAN_ROOT}/applications/page-scraper/requirements.txt"
+    OUTPUT_PATH="${OUTPUT_PATH}"
 else
-    OUTPUT_PATH="$SCRIPT_DIR/../../infrastructure/lambda_function.zip"
+    # Running manually - use script directory as reference
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    SOURCE_DIR="$SCRIPT_DIR/src"
+    REQUIREMENTS_FILE="$SCRIPT_DIR/requirements.txt"
+    
+    # Handle OUTPUT_PATH - if relative, resolve from current working directory, not script directory
+    if [ -n "${OUTPUT_PATH:-}" ]; then
+        # If OUTPUT_PATH is relative, make it absolute from current working directory
+        if [[ ! "$OUTPUT_PATH" = /* ]]; then
+            OUTPUT_PATH="$(pwd)/$OUTPUT_PATH"
+        fi
+    else
+        OUTPUT_PATH="$SCRIPT_DIR/../../infrastructure/lambda_function.zip"
+    fi
 fi
 
-log_info "Build script started from: $SCRIPT_DIR"
+log_info "Build script started from: ${SCRIPT_DIR:-$PWD}"
 log_info "Source directory: $SOURCE_DIR"
 log_info "Requirements file: $REQUIREMENTS_FILE"
 log_info "Output path: $OUTPUT_PATH"

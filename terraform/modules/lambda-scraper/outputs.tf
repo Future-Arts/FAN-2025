@@ -35,9 +35,9 @@ output "source_code_hash" {
   value       = aws_lambda_function.scraper.source_code_hash
 }
 
-output "git_commit_hash" {
-  description = "Git commit hash used for this deployment"
-  value       = data.external.git_commit.result.commit_hash
+output "build_hash" {
+  description = "Build hash used for this deployment"
+  value       = data.external.build_info.result.hash
 }
 
 output "build_timestamp" {

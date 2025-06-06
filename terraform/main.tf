@@ -235,10 +235,10 @@ module "page_scraper_lambda" {
   function_name     = "page-scraper"
   lambda_role_arn   = module.iam.lambda_execution_role_arn
   
-  # Build configuration
-  source_path        = "../applications/page-scraper/src"
-  build_script_path  = "../applications/page-scraper/build.sh"
-  output_path        = "../infrastructure/lambda_function.zip"
+  # Build configuration (relative to FAN-2025 root)
+  source_path        = "applications/page-scraper/src"
+  build_script_path  = "applications/page-scraper/build.sh"
+  output_path        = "infrastructure/lambda_function.zip"
   
   environment       = var.environment
   aws_region        = var.aws_region

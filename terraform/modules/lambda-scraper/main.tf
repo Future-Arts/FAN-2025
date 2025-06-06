@@ -22,51 +22,50 @@ terraform {
   }
 }
 
-# Data source for git commit hash
-data "external" "git_commit" {
-  program = ["bash", "-c", "cd ${var.source_path} && echo '{\"commit_hash\": \"'$(git rev-parse HEAD 2>/dev/null || echo 'local-dev')'\"}'"]
+# Set FAN-2025 root directory
+locals {
+  fan_root = abspath("${path.module}/../../..")
+  abs_source_path = "${local.fan_root}/${var.source_path}"
+  abs_output_path = "${local.fan_root}/${var.output_path}"
+  requirements_path = "${local.fan_root}/applications/page-scraper/requirements.txt"
+  build_script = "${local.fan_root}/terraform/build_lambda.py"
 }
 
-# Advanced source code hash calculation
-data "external" "source_files_hash" {
-  program = ["bash", "-c", <<-EOT
-    cd ${var.source_path}
-    HASH=$(find . -type f \( -name "*.py" -o -name "requirements.txt" \) -exec sha256sum {} \; 2>/dev/null | sort | sha256sum | cut -d' ' -f1 || echo 'no-files')
-    echo "{\"hash\": \"$HASH\"}"
-  EOT
-  ]
+# Build hash calculation using Python script
+data "external" "build_info" {
+  program = ["bash", "-c", "python3 \"${local.build_script}\""]
+  
+  # Pass paths as environment variables
+  query = {
+    SOURCE_PATH = local.abs_source_path
+    REQUIREMENTS_FILE = local.requirements_path
+    OUTPUT_PATH = local.abs_output_path
+  }
 }
 
 # Create directory for infrastructure files
 resource "null_resource" "create_infrastructure_dir" {
   provisioner "local-exec" {
-    command = "mkdir -p ${dirname(var.output_path)}"
+    command = "mkdir -p ${dirname(local.abs_output_path)}"
   }
 }
 
-# Modern build automation with robust error handling
+# Lambda build using Python script
 resource "null_resource" "lambda_build" {
   triggers = {
-    # Multi-factor trigger system
-    source_code_hash = data.external.source_files_hash.result.hash
-    git_commit      = data.external.git_commit.result.commit_hash
-    requirements    = fileexists("${var.source_path}/../requirements.txt") ? filemd5("${var.source_path}/../requirements.txt") : "no-requirements"
-    build_script    = fileexists(var.build_script_path) ? filemd5(var.build_script_path) : "no-build-script"
+    # Trigger rebuild when source files change
+    build_hash = data.external.build_info.result.hash
     # Force rebuild when variables change
     environment_vars = md5(jsonencode(var.environment_variables))
   }
 
   provisioner "local-exec" {
-    command = "chmod +x ${var.build_script_path} && timeout 300 ${var.build_script_path} || echo 'Build script failed, using fallback'"
+    command = "python3 \"${local.build_script}\""
     environment = {
-      BUILD_ENV     = var.environment
-      AWS_REGION    = var.aws_region
-      SOURCE_PATH   = var.source_path
-      OUTPUT_PATH   = var.output_path
-      GIT_COMMIT    = data.external.git_commit.result.commit_hash
+      SOURCE_PATH = local.abs_source_path
+      REQUIREMENTS_FILE = local.requirements_path
+      OUTPUT_PATH = local.abs_output_path
     }
-    
-    on_failure = continue
   }
 
   depends_on = [null_resource.create_infrastructure_dir]
@@ -74,30 +73,24 @@ resource "null_resource" "lambda_build" {
 
 # Fallback requirements.txt if not exists
 resource "local_file" "requirements_fallback" {
-  count = fileexists("${var.source_path}/../requirements.txt") ? 0 : 1
+  count = fileexists(local.requirements_path) ? 0 : 1
   
   content = <<EOF
 requests==2.31.0
 beautifulsoup4==4.12.2
+boto3
 EOF
-  filename = "${var.source_path}/../requirements.txt"
+  filename = local.requirements_path
 }
 
-# Content-aware archive generation
-data "archive_file" "lambda_zip" {
-  type        = "zip"
-  source_dir  = var.source_path
-  output_path = var.output_path
-  
-  depends_on = [
-    null_resource.lambda_build,
-    local_file.requirements_fallback
-  ]
+# Lambda package path (build script creates the zip)
+locals {
+  lambda_package_path = local.abs_output_path
 }
 
 # Modern Lambda function with ARM64 and enhanced logging
 resource "aws_lambda_function" "scraper" {
-  filename         = data.archive_file.lambda_zip.output_path
+  filename         = local.lambda_package_path
   function_name    = var.function_name
   role            = var.lambda_role_arn
   handler         = var.handler
@@ -109,7 +102,7 @@ resource "aws_lambda_function" "scraper" {
   architectures = var.use_arm64 ? ["arm64"] : ["x86_64"]
   
   # Hash-based deployment - only update when content changes
-  source_code_hash = data.archive_file.lambda_zip.output_base64sha256
+  source_code_hash = filebase64sha256(local.abs_output_path)
   
   # Enhanced logging configuration (2024+ feature)
   dynamic "logging_config" {
@@ -163,7 +156,6 @@ resource "aws_cloudwatch_log_group" "lambda_logs" {
   tags = {
     Name        = "${var.function_name}-logs"
     Environment = var.environment
-    GitCommit   = data.external.git_commit.result.commit_hash
   }
 }
 
