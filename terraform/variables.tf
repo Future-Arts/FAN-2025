@@ -11,3 +11,70 @@ variable "aws_region" {
   type        = string
   default     = "us-west-2"
 }
+
+# Add these variables to the END of your existing variables.tf file
+
+# ================================================================
+# 3D VISUALIZATION VARIABLES
+# ================================================================
+
+variable "enable_3d_optimizations" {
+  description = "Enable 3D visualization specific optimizations"
+  type        = bool
+  default     = false
+}
+
+variable "max_nodes_per_website" {
+  description = "Maximum number of nodes to process per website for 3D visualization"
+  type        = string
+  default     = "500"
+}
+
+variable "enable_progressive_loading" {
+  description = "Enable progressive loading for large datasets"
+  type        = bool
+  default     = false
+}
+
+variable "lambda_memory_size" {
+  description = "Lambda memory size in MB"
+  type        = number
+  default     = 512
+}
+
+variable "lambda_timeout" {
+  description = "Lambda timeout in seconds"
+  type        = number
+  default     = 300
+}
+
+variable "lambda_use_arm64" {
+  description = "Use ARM64 Graviton processors for Lambda"
+  type        = bool
+  default     = true
+}
+
+variable "lambda_max_concurrency" {
+  description = "Maximum concurrent Lambda executions"
+  type        = number
+  default     = 10
+}
+
+variable "enable_enhanced_monitoring" {
+  description = "Enable enhanced monitoring"
+  type        = bool
+  default     = false
+}
+
+variable "dynamodb_billing_mode" {
+  description = "DynamoDB billing mode"
+  type        = string
+  default     = "PAY_PER_REQUEST"
+}
+
+# CORS configuration
+variable "cors_origins" {
+  description = "Allowed CORS origins for API Gateway"
+  type        = list(string)
+  default     = ["*"]
+}
