@@ -214,11 +214,10 @@ module "storage" {
   scraped_data_bucket_name = "artist-scraped-data"
   enable_versioning        = true
   enable_encryption        = true
-  enable_lifecycle_rules   = var.enable_s3_lifecycle_rules
-  
+ 
   # Enhanced monitoring for 3D visualization data
   enable_monitoring             = true
-  bucket_size_alarm_threshold   = var.s3_size_alarm_threshold
+  bucket_size_alarm_threshold   = 107374182400
   alarm_topic_arn              = module.monitoring.sns_topic_arn
 }
 
@@ -230,12 +229,8 @@ module "sqs_queues" {
   visibility_timeout_seconds     = 900  # Increased for 3D processing
   max_receive_count             = 3
   enable_monitoring             = true
-  queue_depth_alarm_threshold   = var.sqs_alarm_threshold
+  queue_depth_alarm_threshold   = 100
   alarm_topic_arn               = module.monitoring.sns_topic_arn
-  
-  # Enhanced DLQ settings for 3D processing failures
-  dlq_message_retention_seconds = 1209600  # 14 days
-  enable_dlq_alarms            = true
 }
 
 # Enhanced IAM with specific 3D dashboard permissions
@@ -250,7 +245,6 @@ module "iam" {
   
   # Enhanced permissions for 3D visualization
   cognito_identity_pool_id = aws_cognito_identity_pool.dashboard_identity_pool.id
-  enable_enhanced_dynamo_permissions = true
 }
 
 # Enhanced Lambda with 3D processing optimizations

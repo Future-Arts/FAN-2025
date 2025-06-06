@@ -78,3 +78,70 @@ variable "cors_origins" {
   type        = list(string)
   default     = ["*"]
 }
+
+
+variable "enable_s3_lifecycle_rules" {
+  description = "Enable S3 lifecycle rules"
+  type        = bool
+  default     = false
+}
+
+variable "sqs_alarm_threshold" {
+  description = "SQS alarm threshold"
+  type        = number
+  default     = 100
+}
+
+variable "scraping_max_depth" {
+  description = "Maximum scraping depth"
+  type        = string
+  default     = "20"
+}
+
+variable "rate_limit_per_domain" {
+  description = "Rate limit per domain"
+  type        = string
+  default     = "10"
+}
+
+variable "allowed_domains" {
+  description = "Allowed domains list"
+  type        = list(string)
+  default     = []
+}
+
+variable "log_retention_days" {
+  description = "Log retention days"
+  type        = number
+  default     = 14
+}
+
+variable "api_rate_limit" {
+  description = "API rate limit"
+  type        = number
+  default     = 5
+}
+
+variable "api_burst_limit" {
+  description = "API burst limit"
+  type        = number
+  default     = 10
+}
+
+variable "api_monthly_quota" {
+  description = "API monthly quota"
+  type        = number
+  default     = 1000
+}
+
+variable "notification_email" {
+  description = "Notification email"
+  type        = string
+  default     = ""
+}
+
+variable "slack_webhook_url" {
+  description = "Slack webhook URL"
+  type        = string
+  default     = ""
+}
