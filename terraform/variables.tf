@@ -145,3 +145,111 @@ variable "slack_webhook_url" {
   type        = string
   default     = ""
 }
+
+# Add these missing variables to your terraform/variables.tf file
+
+# ================================================================
+# DYNAMODB CAPACITY VARIABLES
+# ================================================================
+
+variable "enable_provisioned_capacity" {
+  description = "Enable provisioned capacity for DynamoDB"
+  type        = bool
+  default     = false
+}
+
+variable "read_capacity_units" {
+  description = "Read capacity units for DynamoDB table"
+  type        = number
+  default     = 5
+}
+
+variable "write_capacity_units" {
+  description = "Write capacity units for DynamoDB table"
+  type        = number
+  default     = 5
+}
+
+variable "gsi_read_capacity_units" {
+  description = "Read capacity units for GSI"
+  type        = number
+  default     = 5
+}
+
+variable "gsi_write_capacity_units" {
+  description = "Write capacity units for GSI"
+  type        = number
+  default     = 5
+}
+
+# ================================================================
+# DYNAMODB FEATURES
+# ================================================================
+
+variable "enable_point_in_time_recovery" {
+  description = "Enable point-in-time recovery for DynamoDB"
+  type        = bool
+  default     = true
+}
+
+variable "enable_autoscaling" {
+  description = "Enable autoscaling for DynamoDB"
+  type        = bool
+  default     = false
+}
+
+# ================================================================
+# AUTOSCALING VARIABLES
+# ================================================================
+
+variable "min_read_capacity_units" {
+  description = "Minimum read capacity units for autoscaling"
+  type        = number
+  default     = 5
+}
+
+variable "max_read_capacity_units" {
+  description = "Maximum read capacity units for autoscaling"
+  type        = number
+  default     = 40
+}
+
+variable "min_write_capacity_units" {
+  description = "Minimum write capacity units for autoscaling"
+  type        = number
+  default     = 5
+}
+
+variable "max_write_capacity_units" {
+  description = "Maximum write capacity units for autoscaling"
+  type        = number
+  default     = 40
+}
+
+variable "read_target_utilization" {
+  description = "Target utilization for read capacity autoscaling"
+  type        = number
+  default     = 70
+}
+
+variable "write_target_utilization" {
+  description = "Target utilization for write capacity autoscaling"
+  type        = number
+  default     = 70
+}
+
+# ================================================================
+# COST MONITORING
+# ================================================================
+
+variable "enable_cost_monitoring" {
+  description = "Enable cost monitoring alarms"
+  type        = bool
+  default     = false
+}
+
+variable "daily_cost_threshold" {
+  description = "Daily cost threshold for alarms (USD)"
+  type        = number
+  default     = 10
+}

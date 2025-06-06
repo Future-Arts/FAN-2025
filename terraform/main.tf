@@ -325,7 +325,7 @@ module "monitoring" {
   aws_region  = var.aws_region
   
   # Resources to monitor
-  dynamodb_table_name  = aws_dynamodb_table.sitemap_storage.name
+  dynamodb_table_name  = aws_dynamodb_table.website_sitemaps.name
   lambda_function_name = module.page_scraper_lambda.function_name
   sqs_queue_name      = module.sqs_queues.scraping_queue_name
   api_gateway_name    = module.api_gateway.api_gateway_id

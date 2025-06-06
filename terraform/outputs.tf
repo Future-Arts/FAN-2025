@@ -26,7 +26,7 @@ output "dlq_urls" {
 
 output "sitemap_table_name" {
   description = "Name of the DynamoDB sitemap table"
-  value       = aws_dynamodb_table.sitemap_storage.name
+  value       = aws_dynamodb_table.website_sitemaps.name
 }
 
 output "s3_bucket_name" {
@@ -42,8 +42,8 @@ output "cognito_identity_pool_id" {
 output "dashboard_environment_variables" {
   description = "Environment variables for dashboard configuration"
   value = {
-    VITE_AWS_REGION = data.aws_region.current.name
+    VITE_AWS_REGION           = data.aws_region.current.name
     VITE_AWS_IDENTITY_POOL_ID = aws_cognito_identity_pool.dashboard_identity_pool.id
-    VITE_SITEMAP_TABLE_NAME = aws_dynamodb_table.sitemap_storage.name
+    VITE_SITEMAP_TABLE_NAME   = aws_dynamodb_table.website_sitemaps.name
   }
 }
