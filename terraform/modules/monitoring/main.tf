@@ -63,9 +63,4 @@ resource "aws_cloudwatch_dashboard" "scraping_dashboard" {
       }
     ]
   })
-
-  tags = {
-    Name        = "${var.environment} Scraping Dashboard"
-    Environment = var.environment
-  }
 }

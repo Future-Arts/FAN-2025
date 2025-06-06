@@ -224,3 +224,26 @@ resource "aws_iam_role_policy" "lambda_dynamodb_policy" {
     ]
   })
 }
+
+# Lambda S3 access policy for scraped data storage
+resource "aws_iam_role_policy" "lambda_s3_policy" {
+  name = "lambda-s3-policy"
+  role = aws_iam_role.lambda_execution.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:DeleteObject"
+        ]
+        Resource = [
+          "${var.s3_bucket_arn}/*"
+        ]
+      }
+    ]
+  })
+}

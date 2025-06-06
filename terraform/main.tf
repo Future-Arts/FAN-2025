@@ -91,7 +91,7 @@ resource "aws_dynamodb_table" "terraform_state_lock" {
 
 # Enhanced DynamoDB table with adjacency list pattern for 3D force graphs
 resource "aws_dynamodb_table" "website_sitemaps" {
-  name           = "WebScrapingDataStore"  # Following AWS naming convention from strategy
+  name           = "website-sitemaps"  # Synchronized with IAM policies and other references
   billing_mode   = var.enable_provisioned_capacity ? "PROVISIONED" : "PAY_PER_REQUEST"
   hash_key       = "PK"
   range_key      = "SK"
@@ -158,27 +158,8 @@ resource "aws_dynamodb_table" "website_sitemaps" {
     enabled = var.enable_point_in_time_recovery
   }
 
-  # Auto-scaling for provisioned capacity
-  dynamic "autoscaling_read" {
-    for_each = var.enable_provisioned_capacity && var.enable_autoscaling ? [1] : []
-    content {
-      max_capacity = var.max_read_capacity_units
-      min_capacity = var.min_read_capacity_units
-      target_value = var.read_target_utilization
-    }
-  }
-
-  dynamic "autoscaling_write" {
-    for_each = var.enable_provisioned_capacity && var.enable_autoscaling ? [1] : []
-    content {
-      max_capacity = var.max_write_capacity_units
-      min_capacity = var.min_write_capacity_units
-      target_value = var.write_target_utilization
-    }
-  }
-
   tags = {
-    Name                = "WebScrapingDataStore"
+    Name                = "Website Sitemaps"
     Environment         = var.environment
     Purpose             = "3D Force Graph Data Storage"
     OptimizedFor        = "AdjacencyListPattern"
