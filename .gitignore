@@ -2,6 +2,7 @@
 
 *.zip
 .venv/
+infrastructure/**
 
 # Terraform config - SECURITY CRITICAL
 .terraform
