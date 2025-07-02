@@ -1,0 +1,43 @@
+Create lambda layer for libraries that need to download
+
+cd to your destination to put file locally
+    cd source
+
+Create a directory & install requests
+Run these commands on your local machine
+    mkdir python
+
+ virtual environment ensures clean package installation without conflicts.
+    python -m venv venv
+    venv\Scripts\activate  # For Windows
+    pip install requests -t python/
+
+save the file as zip file (ex: requests_layer.zip)
+
+
+Upload the Layer to AWS Lambda
+    -Go to the AWS Lambda Console.
+    -Click on Layers in the left menu.
+    -Click Create Layer.
+    -Upload the requests-layer.zip file.
+    -Set the runtime to match your Lambda (e.g., Python 3.13).
+
+
+
+Attach the Layer to Your Lambda Function
+    -Go to your Lambda function.
+    -Scroll down to the "Layers" section.
+    -Click "Add a layer" → "Custom layers".
+    -Select the Layer you just uploaded.
+
+
+If some error appear for the layer
+TRY:
+    Verify That the Layer is Uploaded Correctly
+        -Go to AWS Lambda Console → Layers.
+        -Check if the newly created layer appears in the list.
+        -Click on the layer and copy the full ARN 
+            arn:aws:lambda:us-west-2:123456789012:layer:requests-layer:1
+
+
+*** Create new policy to write to S3
